@@ -54,10 +54,10 @@ export const SparkleModal: React.FC<SparkleModalProps> = ({
             <div>
               <div className="text-[10px] font-mono-meta uppercase tracking-widest text-[#8B2635]">
                 {tr(
-                  'Karta docenienia · Sparkle',
-                  'Appreciation Card · Sparkle',
-                  'Tarjeta de aprecio · Sparkle',
-                  'Carte d’appréciation · Sparkle'
+                  'Karta docenienia',
+                  'Appreciation Card',
+                  'Tarjeta de aprecio',
+                  'Carte d’appréciation'
                 )}
               </div>
               <h3 className="text-base font-serif-literary font-medium text-[#1C1A18]">

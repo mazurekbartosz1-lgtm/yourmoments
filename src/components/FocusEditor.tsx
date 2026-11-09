@@ -885,19 +885,21 @@ export const FocusEditor: React.FC<FocusEditorProps> = ({
     };
   }, [isDictating, requestScreenWakeLock]);
 
-  // Automatically convert completed markup tags (**bold**, *italic*, _italic_, ***both***, <b>, <i>)
+  // Automatically convert completed markup tags (*bold*, **bold**, _italic_, __italic__, *_both_*, <b>, <i>)
   // into zero-width formatted markers so sentences immediately transform into bold/italic
   const transformAutoMarkup = useCallback((raw: string): string => {
     return raw
-      // 1. Bold + Italic: ***zdanie***
+      // 1. Bold + Italic: *_zdanie_*, _*zdanie*_, ***zdanie***
       .replace(/\*\*\*([^*\n]+)\*\*\*/g, '\u2063$1\u2063')
-      // 2. Bold: **zdanie**, __zdanie__, <b>zdanie</b>, [b]zdanie[/b], <strong>zdanie</strong>
+      .replace(/\*_([^*\n]+)_\*/g, '\u2063$1\u2063')
+      .replace(/_\*([^_\n]+)\*_/g, '\u2063$1\u2063')
+      // 2. Bold: *zdanie*, **zdanie**, <b>zdanie</b>, [b]zdanie[/b], <strong>zdanie</strong>
       .replace(/\*\*([^*\n]+)\*\*/g, '\u2062$1\u2062')
-      .replace(/__([^_\n]+)__/g, '\u2062$1\u2062')
+      .replace(/(?<![*\\])\*([^*\n]+)\*(?!\*)/g, '\u2062$1\u2062')
       .replace(/<(?:b|strong)>([\s\S]*?)<\/(?:b|strong)>/gi, '\u2062$1\u2062')
       .replace(/\[b\]([\s\S]*?)\[\/b\]/gi, '\u2062$1\u2062')
-      // 3. Italic: *zdanie*, _zdanie_, <i>zdanie</i>, [i]zdanie[/i], <em>zdanie</em>
-      .replace(/(?<![*\\])\*([^*\n]+)\*(?!\*)/g, '\u2064$1\u2064')
+      // 3. Italic: _zdanie_, __zdanie__, <i>zdanie</i>, [i]zdanie[/i], <em>zdanie</em>
+      .replace(/__([^_\n]+)__/g, '\u2064$1\u2064')
       .replace(
         /(?<![_a-zA-Z0-9ąćęłńóśźżĄĆĘŁŃÓŚŹŻ])_([^_\n]+)_(?![_a-zA-Z0-9ąćęłńóśźżĄĆĘŁŃÓŚŹŻ])/g,
         '\u2064$1\u2064'
@@ -1241,8 +1243,21 @@ export const FocusEditor: React.FC<FocusEditorProps> = ({
           }
         });
       } else {
-        // Insert markup tag pair (**tekst** or *tekst*) and place cursor inside so typing transforms it
-        const tag = type === 'bold' ? '**' : '*';
+        const marker = type === 'bold' ? '\u2062' : '\u2064';
+        if (current[start] === marker) {
+          const newPos = start + 1;
+          cursorPosLatestRef.current = newPos;
+          setCursorPos(newPos);
+          requestAnimationFrame(() => {
+            if (textareaRef.current) {
+              textareaRef.current.focus();
+              textareaRef.current.setSelectionRange(newPos, newPos);
+            }
+          });
+          return;
+        }
+        // Insert markup tag pair (*tekst* for bold, _tekst_ for italic) and place cursor inside so typing transforms it
+        const tag = type === 'bold' ? '*' : '_';
         const nextText = current.slice(0, start) + tag + tag + current.slice(start);
         const newPos = start + tag.length;
         contentLatestRef.current = nextText;
@@ -1402,9 +1417,15 @@ export const FocusEditor: React.FC<FocusEditorProps> = ({
           .replace(/<(?:b|strong)>([\s\S]*?)<\/(?:b|strong)>/gi, '\u2062$1\u2062')
           .replace(/<(?:i|em)>([\s\S]*?)<\/(?:i|em)>/gi, '\u2064$1\u2064')
           .replace(/\*\*\*([^*\n]+)\*\*\*/g, '\u2063$1\u2063')
+          .replace(/\*_([^*\n]+)_\*/g, '\u2063$1\u2063')
+          .replace(/_\*([^_\n]+)\*_/g, '\u2063$1\u2063')
           .replace(/\*\*([^*\n]+)\*\*/g, '\u2062$1\u2062')
-          .replace(/__([^_\n]+)__/g, '\u2062$1\u2062')
-          .replace(/(?<![*\\])\*([^*\n]+)\*(?!\*)/g, '\u2064$1\u2064')
+          .replace(/(?<![*\\])\*([^*\n]+)\*(?!\*)/g, '\u2062$1\u2062')
+          .replace(/__([^_\n]+)__/g, '\u2064$1\u2064')
+          .replace(
+            /(?<![_a-zA-Z0-9ąćęłńóśźżĄĆĘŁŃÓŚŹŻ])_([^_\n]+)_(?![_a-zA-Z0-9ąćęłńóśźżĄĆĘŁŃÓŚŹŻ])/g,
+            '\u2064$1\u2064'
+          )
       : segmentText;
 
     const parts = normalized.split(
@@ -2458,17 +2479,17 @@ export const FocusEditor: React.FC<FocusEditorProps> = ({
                       )}
                     </button>
 
-                    {/* Quick Bold (**tekst**) & Italic (*tekst*) markup buttons */}
+                    {/* Quick Bold (*tekst*) & Italic (_tekst_) markup buttons */}
                     <div className="flex items-center rounded border border-[#DDD6C8] bg-[#F5F2EB] divide-x divide-[#DDD6C8] overflow-hidden shrink-0 h-7 sm:min-h-[30px]">
                       <button
                         type="button"
                         onMouseDown={e => e.preventDefault()}
                         onClick={() => handleInsertMarkup('bold')}
                         title={tr(
-                          'Pogrubienie — wpisz **tekst** lub zaznacz słowa i kliknij B',
-                          'Bold — type **text** or select words and click B',
-                          'Negrita — escribe **texto** o selecciona palabras y pulsa B',
-                          'Gras — tapez **texte** ou sélectionnez des mots et cliquez sur B'
+                          'Pogrubienie — wpisz *tekst* lub zaznacz słowa i kliknij B',
+                          'Bold — type *text* or select words and click B',
+                          'Negrita — escribe *texto* o selecciona palabras y pulsa B',
+                          'Gras — tapez *texte* ou sélectionnez des mots et cliquez sur B'
                         )}
                         className="px-2 h-full font-serif-literary font-bold text-[11px] sm:text-xs text-[#524D46] hover:bg-[#EAE5DA] hover:text-[#1C1A18] transition-colors cursor-pointer"
                       >
@@ -2479,10 +2500,10 @@ export const FocusEditor: React.FC<FocusEditorProps> = ({
                         onMouseDown={e => e.preventDefault()}
                         onClick={() => handleInsertMarkup('italic')}
                         title={tr(
-                          'Kursywa — wpisz *tekst* lub zaznacz słowa i kliknij I',
-                          'Italic — type *text* or select words and click I',
-                          'Cursiva — escribe *texto* o selecciona palabras y pulsa I',
-                          'Italique — tapez *texte* ou sélectionnez des mots et cliquez sur I'
+                          'Kursywa — wpisz _tekst_ lub zaznacz słowa i kliknij I',
+                          'Italic — type _text_ or select words and click I',
+                          'Cursiva — escribe _texto_ o selecciona palabras y pulsa I',
+                          'Italique — tapez _texte_ ou sélectionnez des mots et cliquez sur I'
                         )}
                         className="px-2 h-full font-serif-literary italic text-[11px] sm:text-xs text-[#524D46] hover:bg-[#EAE5DA] hover:text-[#1C1A18] transition-colors cursor-pointer"
                       >
@@ -3965,12 +3986,12 @@ export const FocusEditor: React.FC<FocusEditorProps> = ({
                   <button
                     type="button"
                     onClick={onTriggerSparkle}
-                    aria-label="Sparkle"
+                    aria-label={tr('Karta docenienia', 'Appreciation card', 'Tarjeta de aprecio', 'Carte d’appréciation')}
                     title={tr(
-                      'Sparkle czeka na Ciebie! Kliknij, aby zobaczyć kumplowskie podsumowanie ostatnich dni',
-                      'Sparkle awaits! Click to see a friendly summary of your recent days',
-                      '¡Sparkle te espera! Haz clic para ver un resumen cercano de tus últimos días',
-                      'Sparkle vous attend ! Cliquez pour voir un résumé chaleureux de vos derniers jours'
+                      'Kliknij, aby zobaczyć ciepłe docenienie Twoich ostatnich dni',
+                      'Click to see a warm appreciation of your recent days',
+                      'Haz clic para ver un resumen cálido de tus últimos días',
+                      'Cliquez pour voir un résumé chaleureux de vos derniers jours'
                     )}
                     className="relative flex items-center justify-center px-2 py-1 rounded border border-[#DDD6C8] bg-[#F5F2EB] hover:bg-[#EAE5DA] text-[#8B2635] cursor-pointer transition-colors animate-pulse shrink-0"
                   >
@@ -4825,7 +4846,7 @@ export const FocusEditor: React.FC<FocusEditorProps> = ({
                             <span className="w-4 h-4 rounded-full border border-[#1C1A18] bg-[#EBC5CF] inline-flex items-center justify-center">
                               <Sparkles className="w-2.5 h-2.5 text-[#1C1A18]" />
                             </span>
-                            <span>{tr('Gwiazdka Sparkle', 'Sparkle card', 'Tarjeta Sparkle', 'Carte Sparkle')}</span>
+                            <span>{tr('Karta docenienia', 'Appreciation card', 'Tarjeta de aprecio', 'Carte d’appréciation')}</span>
                           </span>
                         </div>
                       </div>
@@ -5063,10 +5084,10 @@ export const FocusEditor: React.FC<FocusEditorProps> = ({
                                       <Sparkles className="w-3.5 h-3.5" />
                                       <span>
                                         {tr(
-                                          'Karta docenienia · Sparkle',
-                                          'Appreciation Card · Sparkle',
-                                          'Tarjeta de aprecio · Sparkle',
-                                          'Carte d’appréciation · Sparkle'
+                                          'Karta docenienia',
+                                          'Appreciation Card',
+                                          'Tarjeta de aprecio',
+                                          'Carte d’appréciation'
                                         )}
                                       </span>
                                     </span>
@@ -5096,10 +5117,10 @@ export const FocusEditor: React.FC<FocusEditorProps> = ({
                                 <Sparkles className="w-3.5 h-3.5" />
                                 <span>
                                   {tr(
-                                    'Karta docenienia · Sparkle',
-                                    'Appreciation Card · Sparkle',
-                                    'Tarjeta de aprecio · Sparkle',
-                                    'Carte d’appréciation · Sparkle'
+                                    'Karta docenienia',
+                                    'Appreciation Card',
+                                    'Tarjeta de aprecio',
+                                    'Carte d’appréciation'
                                   )}
                                 </span>
                               </span>

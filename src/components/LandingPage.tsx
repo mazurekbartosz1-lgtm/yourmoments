@@ -269,15 +269,131 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     }
   };
 
-  const handlePlgDraftChange = (newText: string) => {
-    setPlgDraft(newText);
+  const transformPlgAutoMarkup = (raw: string): string => {
+    return raw
+      .replace(/\*\*\*([^*\n]+)\*\*\*/g, '\u2063$1\u2063')
+      .replace(/\*_([^*\n]+)_\*/g, '\u2063$1\u2063')
+      .replace(/_\*([^_\n]+)\*_/g, '\u2063$1\u2063')
+      .replace(/\*\*([^*\n]+)\*\*/g, '\u2062$1\u2062')
+      .replace(/(?<![*\\])\*([^*\n]+)\*(?!\*)/g, '\u2062$1\u2062')
+      .replace(/<(?:b|strong)>([\s\S]*?)<\/(?:b|strong)>/gi, '\u2062$1\u2062')
+      .replace(/\[b\]([\s\S]*?)\[\/b\]/gi, '\u2062$1\u2062')
+      .replace(/__([^_\n]+)__/g, '\u2064$1\u2064')
+      .replace(
+        /(?<![_a-zA-Z0-9ąćęłńóśźżĄĆĘŁŃÓŚŹŻ])_([^_\n]+)_(?![_a-zA-Z0-9ąćęłńóśźżĄĆĘŁŃÓŚŹŻ])/g,
+        '\u2064$1\u2064'
+      )
+      .replace(/<(?:i|em)>([\s\S]*?)<\/(?:i|em)>/gi, '\u2064$1\u2064')
+      .replace(/\[i\]([\s\S]*?)\[\/i\]/gi, '\u2064$1\u2064');
+  };
+
+  const renderPlgInlineMarkup = (segmentText: string) => {
+    if (!segmentText) return null;
+    const parts = segmentText.split(
+      /(\u2063[^\u2063]*\u2063|\u2062[^\u2062]*\u2062|\u2064[^\u2064]*\u2064|\u2063[^\u2063]+$|\u2062[^\u2062]+$|\u2064[^\u2064]+$)/g
+    );
+    const boldStyleClass =
+      'font-normal tracking-normal [text-shadow:0.65px_0_0_currentColor,-0.3px_0_0_currentColor]';
+
+    return parts.map((part, i) => {
+      if (!part) return null;
+      if (part.startsWith('\u2063')) {
+        return (
+          <span key={i} className={`italic ${boldStyleClass} text-[#1C1A18]`}>
+            {part}
+          </span>
+        );
+      }
+      if (part.startsWith('\u2062')) {
+        return (
+          <span key={i} className={`${boldStyleClass} text-[#1C1A18]`}>
+            {part}
+          </span>
+        );
+      }
+      if (part.startsWith('\u2064')) {
+        return (
+          <em key={i} className="italic font-normal tracking-normal text-[#1C1A18]">
+            {part}
+          </em>
+        );
+      }
+      return <span key={i}>{part}</span>;
+    });
+  };
+
+  const renderPlgFormattedText = (rawText: string) => {
+    if (!rawText) return ' ';
+    const lines = rawText.split('\n');
+    const boldQuestionClass =
+      'italic font-normal tracking-normal [text-shadow:0.65px_0_0_currentColor,-0.3px_0_0_currentColor]';
+
+    return lines.map((line, idx) => {
+      const cleanTrimmed = line
+        .replace(/[\u200B-\u200D\uFEFF\u2062\u2063\u2064]/g, '')
+        .replace(/^\*{1,3}|\*{1,3}$/g, '')
+        .trim();
+      const hasInvisibleQuestionMarker =
+        line.startsWith('\u2063') && !line.slice(1).includes('\u2063');
+      const isStandaloneQuestionLine =
+        cleanTrimmed.length >= 8 &&
+        cleanTrimmed.length <= 240 &&
+        /^[¿A-ZĄĆĘŁŃÓŚŹŻÁÉÍÓÚÑÜÀÂÇÈÉÊËÎÏÔÙÛÜ][^.!?\n]{6,235}\?$/.test(cleanTrimmed);
+
+      const isCopiedQuestion =
+        cleanTrimmed.length > 0 && (hasInvisibleQuestionMarker || isStandaloneQuestionLine);
+
+      let questionPart = line;
+      let remainderPart = '';
+      if (isCopiedQuestion && !isStandaloneQuestionLine) {
+        const qIdx = questionPart.indexOf('?');
+        if (qIdx !== -1 && qIdx < questionPart.length - 1) {
+          remainderPart = questionPart.slice(qIdx + 1);
+          questionPart = questionPart.slice(0, qIdx + 1);
+        }
+      }
+
+      return (
+        <React.Fragment key={idx}>
+          {isCopiedQuestion ? (
+            <>
+              <span className={`${boldQuestionClass} text-[#1C1A18]`}>{questionPart}</span>
+              {remainderPart && renderPlgInlineMarkup(remainderPart)}
+            </>
+          ) : (
+            renderPlgInlineMarkup(line)
+          )}
+          {idx < lines.length - 1 ? '\n' : rawText.endsWith('\n') ? '\n\u200b' : ''}
+        </React.Fragment>
+      );
+    });
+  };
+
+  const handlePlgDraftChange = (newText: string, cursorOverride?: number) => {
+    const el = heroTextareaRef.current;
+    const rawCursor = cursorOverride ?? (el ? el.selectionStart ?? newText.length : newText.length);
+    const beforeCursor = newText.slice(0, rawCursor);
+    const afterCursor = newText.slice(rawCursor);
+    const transformedBefore = transformPlgAutoMarkup(beforeCursor);
+    const finalValue = transformPlgAutoMarkup(transformedBefore + afterCursor);
+    const nextCursor = Math.min(finalValue.length, transformedBefore.length);
+
+    setPlgDraft(finalValue);
     setPlgSpellStatus('idle');
     setIsPlgUserTyping(true);
     if (plgTypingTimerRef.current) clearTimeout(plgTypingTimerRef.current);
     plgTypingTimerRef.current = setTimeout(() => {
       setIsPlgUserTyping(false);
     }, 1200);
-    persistPlgDraft(newText, activeHeroPrompt.id, plgWritingSeconds);
+    persistPlgDraft(finalValue, activeHeroPrompt.id, plgWritingSeconds);
+
+    if (finalValue !== newText && el) {
+      requestAnimationFrame(() => {
+        if (heroTextareaRef.current) {
+          heroTextareaRef.current.setSelectionRange(nextCursor, nextCursor);
+        }
+      });
+    }
   };
 
   useEffect(() => {
@@ -288,22 +404,49 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     return () => clearInterval(timer);
   }, [isPlgUserTyping]);
 
-  const applyPlgFormatting = (wrapper: '**' | '*') => {
+  const applyPlgFormatting = (type: 'bold' | 'italic') => {
     const el = heroTextareaRef.current;
     if (!el) return;
     const start = el.selectionStart ?? plgDraft.length;
-    const end = el.selectionEnd ?? plgDraft.length;
-    const selected = plgDraft.slice(start, end);
-    const replacement = selected
-      ? `${wrapper}${selected}${wrapper}`
-      : `${wrapper}${tr('tekst', 'text', 'texto', 'texte')}${wrapper}`;
-    const updated = plgDraft.slice(0, start) + replacement + plgDraft.slice(end);
-    handlePlgDraftChange(updated);
-    setTimeout(() => {
-      el.focus();
-      const cursor = start + replacement.length;
-      el.setSelectionRange(cursor, cursor);
-    }, 15);
+    const end = el.selectionEnd ?? start;
+    const marker = type === 'bold' ? '\u2062' : '\u2064';
+
+    if (start !== end) {
+      const selected = plgDraft.slice(start, end);
+      const wrapped = `${marker}${selected}${marker}`;
+      const updated = plgDraft.slice(0, start) + wrapped + plgDraft.slice(end);
+      const newPos = start + wrapped.length;
+      setPlgDraft(updated);
+      persistPlgDraft(updated, activeHeroPrompt.id, plgWritingSeconds);
+      requestAnimationFrame(() => {
+        if (heroTextareaRef.current) {
+          heroTextareaRef.current.focus();
+          heroTextareaRef.current.setSelectionRange(newPos, newPos);
+        }
+      });
+    } else {
+      if (plgDraft[start] === marker) {
+        const newPos = start + 1;
+        requestAnimationFrame(() => {
+          if (heroTextareaRef.current) {
+            heroTextareaRef.current.focus();
+            heroTextareaRef.current.setSelectionRange(newPos, newPos);
+          }
+        });
+        return;
+      }
+      const tag = type === 'bold' ? '*' : '_';
+      const updated = plgDraft.slice(0, start) + tag + tag + plgDraft.slice(start);
+      const newPos = start + tag.length;
+      setPlgDraft(updated);
+      persistPlgDraft(updated, activeHeroPrompt.id, plgWritingSeconds);
+      requestAnimationFrame(() => {
+        if (heroTextareaRef.current) {
+          heroTextareaRef.current.focus();
+          heroTextareaRef.current.setSelectionRange(newPos, newPos);
+        }
+      });
+    }
   };
 
   const handlePlgAutoFixSpelling = () => {
@@ -355,10 +498,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
   const insertPlgMarginHint = (questionText: string) => {
     const cleanQ = questionText.replace(/[„”"«»→]/g, '').trim();
-    const formatted = `***${cleanQ}***`;
+    const formatted = `\u2063${cleanQ}\u2063`;
     const prefix = plgDraft.trim().length > 0 ? `${plgDraft.replace(/\s+$/, '')}\n\n` : '';
     const updated = `${prefix}${formatted}\n`;
-    handlePlgDraftChange(updated);
+    setPlgDraft(updated);
+    persistPlgDraft(updated, activeHeroPrompt.id, plgWritingSeconds);
     setTimeout(() => {
       if (heroTextareaRef.current) {
         heroTextareaRef.current.focus();
@@ -927,9 +1071,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 strokeLinejoin="round"
               />
             </svg>
-            <span className="inline-flex items-center gap-1.5">
-              <span>{tr('Cześć', 'Hello', 'Hola', 'Bonjour')}</span>
-              {userName && <span className="font-medium">{userName}</span>}
+            <span className="inline-flex items-center gap-1.5 font-medium">
+              <span>{tr('Momenty', 'Moments', 'Momentos', 'Moments')}</span>
             </span>
           </a>
 
@@ -937,11 +1080,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <button
               type="button"
-              onClick={() => scrollToSection('sparkle-share-section')}
+              onClick={() => scrollToSection('flow-section')}
               className="hidden sm:inline-flex h-7 px-2.5 rounded-md border border-[#E2DDD3] bg-[#F5F2EB] hover:bg-[#EAE5DA] text-[11px] font-mono-meta text-[#524D46] hover:text-[#1C1A18] items-center gap-1 transition-colors cursor-pointer"
             >
               <Sparkles className="w-3 h-3 text-[#8B2635]" />
-              <span>{tr('Nowości i opis ↓', 'Features ↓', 'Novedades ↓', 'Nouveautés ↓')}</span>
+              <span>{tr('Jak to działa ↓', 'How it works ↓', 'Cómo funciona ↓', 'Comment ça marche ↓')}</span>
             </button>
 
             <button
@@ -1423,7 +1566,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     {tr('słów', 'words', 'palabras', 'mots')}
                   </div>
                   <p className="text-xs font-serif-literary italic text-[#33302B] line-clamp-3">
-                    „{plgDraft.trim()}”
+                    „{plgDraft.replace(/[\u2062\u2063\u2064]/g, '').trim()}”
                   </p>
                 </div>
               )}
@@ -1474,12 +1617,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         )}
 
         {/* =====================================================================
-            1. FIRST SCREEN: LOGGED-IN STYLE WRITING SANCTUARY (NO MARKETING CLUTTER)
+            1. FIRST SCREEN: COMPACT LOGGED-IN STYLE WRITING AREA (PEEKING FIRST SECTION BELOW)
            ===================================================================== */}
-        <section className="min-h-[calc(100vh-53px)] flex flex-col justify-between w-full text-left relative pt-0 pb-6 sm:pb-10">
+        <section className="flex flex-col justify-between w-full text-left relative pt-0 pb-4 sm:pb-6">
           {/* Pinned Top Dock: Daily Question + Action Toolbar + Mobile Follow-up Question */}
           <div className="w-full bg-[#F7F5F0]/95 border-b border-[#EAE5DA]/85 select-none">
-            <div className="max-w-2xl mx-auto w-full px-3 sm:px-8 pt-3 sm:pt-5 pb-2.5 space-y-2.5 sm:space-y-3">
+            <div className="max-w-2xl mx-auto w-full px-3 sm:px-8 pt-2.5 sm:pt-4 pb-2 space-y-2 sm:space-y-2.5">
               {/* Main Question OR Free Thought Header */}
               <div className="w-full select-none shrink-0">
                 {plgFreeThought ? (
@@ -1509,7 +1652,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     </div>
                   </div>
                 ) : (
-                  <h1 className="w-full text-[17px] sm:text-2xl md:text-[26px] font-serif-literary font-normal leading-snug text-left text-[#6E6961] transition-colors">
+                  <h1 className="w-full text-[17px] sm:text-2xl md:text-[25px] font-serif-literary font-normal leading-snug text-left text-[#6E6961] transition-colors">
                     {getPromptText(activeHeroPrompt, lang)}
                   </h1>
                 )}
@@ -1554,13 +1697,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       )}
                     </button>
 
-                    {/* Bold & Italic */}
+                    {/* Bold (*tekst*) & Italic (_tekst_) */}
                     <div className="flex items-center rounded border border-[#DDD6C8] bg-[#F5F2EB] divide-x divide-[#DDD6C8] overflow-hidden shrink-0 h-7 sm:min-h-[30px]">
                       <button
                         type="button"
                         onMouseDown={e => e.preventDefault()}
-                        onClick={() => applyPlgFormatting('**')}
-                        title={tr('Pogrubienie (**tekst**)', 'Bold (**text**)', 'Negrita (**texto**)', 'Gras (**texte**)')}
+                        onClick={() => applyPlgFormatting('bold')}
+                        title={tr(
+                          'Pogrubienie — wpisz *tekst* lub zaznacz słowa i kliknij B',
+                          'Bold — type *text* or select words and click B',
+                          'Negrita — escribe *texto* o selecciona palabras y pulsa B',
+                          'Gras — tapez *texte* ou sélectionnez des mots et cliquez sur B'
+                        )}
                         className="px-2 h-full font-serif-literary font-bold text-[11px] sm:text-xs text-[#524D46] hover:bg-[#EAE5DA] hover:text-[#1C1A18] transition-colors cursor-pointer"
                       >
                         B
@@ -1568,8 +1716,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       <button
                         type="button"
                         onMouseDown={e => e.preventDefault()}
-                        onClick={() => applyPlgFormatting('*')}
-                        title={tr('Kursywa (*tekst*)', 'Italic (*text*)', 'Cursiva (*texto*)', 'Italique (*texte*)')}
+                        onClick={() => applyPlgFormatting('italic')}
+                        title={tr(
+                          'Kursywa — wpisz _tekst_ lub zaznacz słowa i kliknij I',
+                          'Italic — type _text_ or select words and click I',
+                          'Cursiva — escribe _texto_ o selecciona palabras y pulsa I',
+                          'Italique — tapez _texte_ ou sélectionnez des mots et cliquez sur I'
+                        )}
                         className="px-2 h-full font-serif-literary italic text-[11px] sm:text-xs text-[#524D46] hover:bg-[#EAE5DA] hover:text-[#1C1A18] transition-colors cursor-pointer"
                       >
                         I
@@ -1934,12 +2087,27 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   )}
                 </aside>
 
-                {/* Main Paper Textarea */}
-                <div className="relative w-full pb-4 flex-1 flex flex-col">
+                {/* Main Paper Textarea with Live Rich Formatting Backdrop (matching FocusEditor) */}
+                <div className="relative w-full pb-2">
+                  {/* Visible formatted backdrop layer */}
+                  <div
+                    aria-hidden="true"
+                    className={`editor-sync-layer pointer-events-none absolute top-0 left-0 w-full text-lg sm:text-xl leading-relaxed overflow-hidden p-0 m-0 border-0 text-[#1C1A18] opacity-100 ${
+                      plgDraft ? 'visible' : 'invisible'
+                    }`}
+                  >
+                    {renderPlgFormattedText(plgDraft)}
+                  </div>
+
                   <textarea
                     ref={heroTextareaRef}
                     value={plgDraft}
-                    onChange={e => handlePlgDraftChange(e.target.value)}
+                    onChange={e =>
+                      handlePlgDraftChange(
+                        e.target.value,
+                        e.target.selectionStart ?? e.target.value.length
+                      )
+                    }
                     aria-label={getPromptText(activeHeroPrompt, lang)}
                     placeholder={
                       isPlgListening
@@ -1956,28 +2124,30 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                             'Dites ce que vous avez en tête...'
                           )
                     }
-                    className="w-full min-h-[180px] lg:min-h-[260px] flex-1 bg-transparent border-0 outline-none resize-none text-lg sm:text-xl leading-relaxed placeholder-[#B5B0A6] text-[#1C1A18] focus:ring-0 p-0 m-0 text-left selection:bg-[#E2DDD3]/50"
+                    className={`editor-sync-layer relative z-10 w-full min-h-[105px] sm:min-h-[125px] bg-transparent border-0 outline-none resize-none text-lg sm:text-xl leading-relaxed placeholder-[#B5B0A6] focus:ring-0 p-0 m-0 text-left selection:bg-[#E2DDD3]/50 ${
+                      plgDraft ? 'text-transparent caret-[#1C1A18]' : 'text-[#1C1A18]'
+                    }`}
                   />
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Bottom Section: "Zamknij dzień i załóż konto" + CompanionDesk + 2-line Footer */}
-          <div className="w-full overflow-x-hidden flex flex-col items-center shrink-0 mt-2 lg:mt-4 pt-2">
-            {/* Centered Action Button above the horizontal line */}
-            <div className="max-w-2xl mx-auto w-full px-2.5 sm:px-8 flex flex-col items-center pb-2.5 select-none">
+          {/* Bottom Section: Prominent Primary CTA "Zamknij dzień i załóż konto" + CompanionDesk + 2-line Footer */}
+          <div className="w-full overflow-x-hidden flex flex-col items-center shrink-0 mt-1 sm:mt-2 pt-1">
+            {/* Prominent Centered Primary CTA Button above the horizontal line */}
+            <div className="max-w-2xl mx-auto w-full px-2.5 sm:px-8 flex flex-col items-center pb-3 select-none">
               <button
                 type="button"
                 onClick={handleSaveEntryTrigger}
-                className="group/seal relative overflow-hidden flex items-center gap-1.5 px-3.5 sm:px-4 py-1.5 rounded border border-[#DDD6C8] bg-[#F5F2EB] hover:bg-[#EAE5DA] hover:border-[#1C1A18] text-[#1C1A18] text-[11px] sm:text-xs font-mono-meta font-medium transition-colors cursor-pointer select-none shadow-2xs"
+                className="group/seal relative overflow-hidden flex items-center justify-center gap-2.5 px-6 sm:px-8 py-3 sm:py-3.5 rounded-xl border border-[#1C1A18] bg-[#1C1A18] hover:bg-[#33302B] text-[#FAF8F5] text-xs sm:text-sm font-mono-meta font-medium transition-all cursor-pointer select-none shadow-sm"
               >
                 <svg
                   viewBox="0 0 18 18"
-                  className="relative z-10 w-3.5 h-3.5 shrink-0 text-[#8B2635] transition-colors"
+                  className="relative z-10 w-4 h-4 shrink-0 text-[#EBC5CF] transition-colors"
                   fill="none"
                   stroke="currentColor"
-                  strokeWidth="1.5"
+                  strokeWidth="1.6"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   aria-hidden="true"
@@ -1997,12 +2167,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                         'Clôturer le jour et créer un compte'
                       )}
                 </span>
+
+                <ArrowRight className="w-4 h-4 text-[#EBC5CF] shrink-0 transition-transform group-hover/seal:translate-x-0.5" />
               </button>
             </div>
 
             {/* CompanionDesk + 2-line footer */}
-            <div className="max-w-2xl mx-auto w-full px-2.5 sm:px-8 flex flex-col items-center select-none border-t border-[#EAE5DA]/70 pt-3">
-              <div className="w-full flex flex-col items-center mb-1.5">
+            <div className="max-w-2xl mx-auto w-full px-2.5 sm:px-8 flex flex-col items-center select-none border-t border-[#EAE5DA]/70 pt-2.5">
+              <div className="w-full flex flex-col items-center mb-1">
                 <CompanionDesk
                   companionId={showcaseCompanion}
                   isTyping={isPlgUserTyping || (plgDraft.length === 0 && isHeroTyping)}
@@ -2014,7 +2186,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </div>
 
               {/* Two-line footer & navigation bar directly below the animal companion */}
-              <div className="w-full flex flex-col items-center gap-2.5 text-xs font-mono-meta text-[#7A756D] py-1">
+              <div className="w-full flex flex-col items-center gap-2 text-xs font-mono-meta text-[#7A756D] py-0.5">
                 {/* Line 1: Live Writing Statistics */}
                 <div className="tabular-nums flex flex-wrap items-center justify-center gap-2 text-[11px] sm:text-xs">
                   <span
@@ -2046,21 +2218,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   )}
                 </div>
 
-                {/* Line 2: Quick Tabs matching FocusEditor + Smooth Scroll to Feature Sections */}
+                {/* Line 2: Quick Tabs matching FocusEditor (Stars graphic icon only + Dziennik + Statystyki + Klucz + Dzielenie się) */}
                 <div className="w-full flex flex-wrap items-center justify-center gap-1.5 sm:gap-2.5 text-[11px] sm:text-xs">
                   <button
                     type="button"
                     onClick={() => setShowDemoSparkleModal(true)}
+                    aria-label={tr('Karta docenienia', 'Appreciation card', 'Tarjeta de aprecio', 'Carte d’appréciation')}
                     title={tr(
-                      'Zobacz przykładową kartę Sparkle (kumplowskie docenienie ostatnich dni)',
-                      'Preview a Sparkle card (friendly appreciation of recent days)',
-                      'Ver ejemplo de Sparkle',
-                      'Voir un exemple de carte Sparkle'
+                      'Zobacz przykładową kartę docenienia ostatnich dni',
+                      'Preview an appreciation card of recent days',
+                      'Ver ejemplo de tarjeta de aprecio',
+                      'Voir un exemple de carte d’appréciation'
                     )}
-                    className="relative flex items-center justify-center gap-1 px-2 py-1 rounded border border-[#DDD6C8] bg-[#F5F2EB] hover:bg-[#EAE5DA] text-[#8B2635] cursor-pointer transition-colors shrink-0"
+                    className="relative flex items-center justify-center px-2 py-1 rounded border border-[#DDD6C8] bg-[#F5F2EB] hover:bg-[#EAE5DA] text-[#8B2635] cursor-pointer transition-colors shrink-0"
                   >
                     <Sparkles className="w-3.5 h-3.5 text-[#8B2635]" />
-                    <span>Sparkle</span>
                   </button>
 
                   <button
@@ -2089,474 +2261,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
                   <button
                     type="button"
-                    onClick={() => scrollToSection('sparkle-share-section')}
+                    onClick={() => scrollToSection('share-section')}
                     className="px-2.5 py-1 rounded border border-[#DDD6C8] bg-[#F5F2EB] hover:bg-[#EAE5DA] text-[#524D46] hover:text-[#1C1A18] transition-colors cursor-pointer inline-flex items-center gap-1 shrink-0"
                   >
                     <Share2 className="w-3 h-3 text-[#8B2635]" />
                     <span>{tr('Dzielenie się myślą ↓', 'Share a moment ↓', 'Compartir ↓', 'Partager ↓')}</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* =====================================================================
-            NEW SECTION BELOW THE FOLD: SPARKLE & ONE-TIME ENCRYPTED SHARE
-           ===================================================================== */}
-        <section
-          id="sparkle-share-section"
-          className="border-t border-[#E5DFD3] bg-[#FAF8F5] py-16 md:py-24"
-        >
-          <div className="max-w-6xl mx-auto px-6 space-y-16">
-            {/* Section Header */}
-            <div className="max-w-2xl space-y-3">
-              <div className="text-xs font-mono-meta text-[#8B2635] uppercase tracking-wider">
-                {tr(
-                  'NOWOŚCI W MOMENTACH · CIEPŁO I BLISKOŚĆ BEZ UTRATY PRYWATNOŚCI',
-                  'NEW IN MOMENTS · WARMTH & CONNECTION WITHOUT LOSING PRIVACY',
-                  'NOVEDADES EN MOMENTS · CALIDEZ Y CERCANÍA CON PRIVACIDAD',
-                  'NOUVEAUTÉS · CHALEUR ET PROXIMITÉ EN TOUTE CONFIDENTIALITÉ'
-                )}
-              </div>
-              <h2
-                className="text-3xl sm:text-4xl font-serif-literary text-[#1C1A18] leading-tight"
-                style={{ textWrap: 'balance' }}
-              >
-                {tr(
-                  'Kumpelskie docenienie Sparkle i bezpieczne, jednorazowe dzielenie się momentem z bliskimi.',
-                  'Friendly Sparkle appreciation cards and one-time encrypted sharing with loved ones.',
-                  'Tarjetas de aprecio Sparkle y enlaces cifrados de un solo uso para compartir con los tuyos.',
-                  'Cartes d’appréciation Sparkle et partage chiffré à usage unique avec vos proches.'
-                )}
-              </h2>
-              <p className="text-base text-[#524D46] font-serif-literary leading-relaxed">
-                {tr(
-                  'Dziennik pozostaje w 100% Twoją prywatną kryjówką, ale kiedy zamkniesz kilka dni z rzędu — doceni Twój wysiłek jak dobry znajomy. A jeśli zechcesz wysłać jedną wybraną myśl komuś bliskiemu, zrobisz to jednorazowym linkiem z kodem PIN.',
-                  'Your journal remains 100% your private sanctuary, yet after sealing a few days it appreciates your effort like a thoughtful friend. And whenever you want to share a single reflection with someone close, you can send a one-time PIN-protected link.',
-                  'Tu diario sigue siendo 100% privado, pero celebra tu constancia como un buen amigo y te permite compartir un momento puntual mediante un enlace único con PIN.',
-                  'Votre journal reste 100 % privé, tout en saluant votre régularité comme un ami bienveillant et en permettant de partager une pensée choisie via un lien unique protégé par PIN.'
-                )}
-              </p>
-            </div>
-
-            {/* Two-Column Interactive Showcase: Left = Sparkle, Right = One-Time Encrypted Share */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
-              {/* 1. SPARKLE ("GWIAZDKI") CARD SHOWCASE */}
-              <div className="lg:col-span-6 bg-[#F7F5F0] border border-[#E2DDD3] rounded-2xl p-6 sm:p-8 flex flex-col justify-between space-y-6">
-                <div className="space-y-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="inline-flex items-center gap-2">
-                      <span className="w-7 h-7 rounded-full bg-[#EBC5CF]/75 border border-[#1C1A18] flex items-center justify-center text-[#1C1A18]">
-                        <Sparkles className="w-3.5 h-3.5 text-[#8B2635]" />
-                      </span>
-                      <span className="text-xs font-mono-meta uppercase tracking-wider text-[#8B2635] font-medium">
-                        {tr(
-                          'Sparkle · Karta docenienia (co 1–4 dni)',
-                          'Sparkle · Appreciation Card (every 1–4 days)',
-                          'Sparkle · Tarjeta de aprecio (cada 1–4 días)',
-                          'Sparkle · Carte d’appréciation (tous les 1–4 jours)'
-                        )}
-                      </span>
-                    </div>
-
-                    <div className="inline-flex items-center gap-1 bg-[#EAE5DA] p-0.5 rounded-lg text-[11px] font-mono-meta">
-                      <button
-                        type="button"
-                        onClick={() => setDemoSparkleIdx(0)}
-                        className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
-                          demoSparkleIdx === 0
-                            ? 'bg-[#1C1A18] text-[#FAF8F5]'
-                            : 'text-[#524D46] hover:text-[#1C1A18]'
-                        }`}
-                      >
-                        {tr('Przykład #1', 'Sample #1', 'Ejemplo #1', 'Exemple #1')}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setDemoSparkleIdx(1)}
-                        className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
-                          demoSparkleIdx === 1
-                            ? 'bg-[#1C1A18] text-[#FAF8F5]'
-                            : 'text-[#524D46] hover:text-[#1C1A18]'
-                        }`}
-                      >
-                        {tr('Przykład #2', 'Sample #2', 'Ejemplo #2', 'Exemple #2')}
-                      </button>
-                    </div>
-                  </div>
-
-                  <p className="text-sm font-serif-literary text-[#524D46] leading-relaxed">
-                    {tr(
-                      'Co kilka zamkniętych dni obok przycisku Dziennika zapala się mała gwiazdka Sparkle. Bez oceniania i bez korporacyjnego tonu — ciepłe podsumowanie od kumpla, który zauważa, gdzie odpuściłeś pośpiech i dlaczego dobrze zrobiłeś.',
-                      'Every few sealed days, a small Sparkle icon lights up next to your Journal button. With zero judgment or corporate jargon, it offers a warm note from a buddy noticing where you slowed down and why you did well.',
-                      'Cada pocos días cerrados se ilumina una estrella Sparkle junto a tu Diario: un resumen cercano y cálido que destaca tus mejores decisiones recientes.',
-                      'Tous les quelques jours clôturés, une étoile Sparkle s’allume près de votre Journal : un mot chaleureux qui souligne ce que vous avez bien fait.'
-                    )}
-                  </p>
-
-                  {/* Live Preview of Sparkle Card */}
-                  <div className="rounded-xl bg-[#FAF8F5] border border-[#DDD6C8] p-5 space-y-4 shadow-2xs">
-                    <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono-meta text-[#7A756D]">
-                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#F3EFE7] border border-[#E2DDD3] text-[#524D46]">
-                        <Calendar className="w-3 h-3 text-[#8B2635]" />
-                        <span>{activeDemoSparkle.periodLabel}</span>
-                      </span>
-                      <span className="inline-flex items-center gap-1 text-[#2E5C33]">
-                        <Sparkles className="w-3 h-3 text-[#8B2635]" />
-                        <span>
-                          {tr('Gwiazdka w kalendarzu', 'Star in calendar', 'Estrella en calendario', 'Étoile au calendrier')}
-                        </span>
-                      </span>
-                    </div>
-
-                    <div className="space-y-2">
-                      <h3 className="text-lg sm:text-xl font-serif-literary font-medium text-[#1C1A18] leading-snug">
-                        {activeDemoSparkle.greeting}
-                      </h3>
-                      <p className="text-sm font-serif-literary text-[#33302B] leading-relaxed">
-                        {activeDemoSparkle.content}
-                      </p>
-                    </div>
-
-                    <div className="p-3.5 rounded-lg bg-[#F3EFE7]/85 border border-[#E2DDD3] space-y-1.5">
-                      <div className="text-[10px] font-mono-meta uppercase tracking-wider text-[#8B2635] flex items-center gap-1">
-                        <Sparkles className="w-3 h-3" />
-                        <span>
-                          {tr('Dlaczego to było dobre:', 'Why this mattered:', 'Por qué estuvo bien:', 'Pourquoi c’était précieux :')}
-                        </span>
-                      </div>
-                      <ul className="space-y-1.5">
-                        {activeDemoSparkle.highlights.map((h, i) => (
-                          <li
-                            key={i}
-                            className="flex items-start gap-2 text-xs sm:text-sm font-serif-literary text-[#1C1A18] leading-snug"
-                          >
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#8B2635] mt-1.5 shrink-0" />
-                            <span>{h}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-2 flex items-center justify-between gap-3 border-t border-[#EAE5DA]">
-                  <span className="text-[11px] font-mono-meta text-[#7A756D]">
-                    {tr(
-                      'Szyfrowane kluczem AES-256 i przypięte do dnia w kalendarzu',
-                      'AES-256 encrypted & pinned to the date in your calendar',
-                      'Cifrado con AES-256 y guardado en tu calendario',
-                      'Chiffré en AES-256 et épinglé dans votre calendrier'
-                    )}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setShowDemoSparkleModal(true)}
-                    className="px-3 py-1.5 rounded border border-[#DDD6C8] bg-[#FAF8F5] hover:bg-[#EAE5DA] text-xs font-mono-meta text-[#1C1A18] inline-flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
-                  >
-                    <Sparkles className="w-3.5 h-3.5 text-[#8B2635]" />
-                    <span>{tr('Otwórz pełną kartę', 'Open full card', 'Abrir tarjeta', 'Ouvrir la carte')}</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* 2. ONE-TIME ENCRYPTED SHARE WITH PIN & AI TRANSLATION SHOWCASE */}
-              <div className="lg:col-span-6 bg-[#F7F5F0] border border-[#E2DDD3] rounded-2xl p-6 sm:p-8 flex flex-col justify-between space-y-6">
-                <div className="space-y-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="inline-flex items-center gap-2">
-                      <span className="w-7 h-7 rounded-full bg-[#EBF2EB] border border-[#1C1A18] flex items-center justify-center text-[#2E5C33]">
-                        <Share2 className="w-3.5 h-3.5 text-[#2E5C33]" />
-                      </span>
-                      <span className="text-xs font-mono-meta uppercase tracking-wider text-[#2E5C33] font-medium">
-                        {tr(
-                          'Jednorazowy link · 4-cyfrowy PIN · 4 języki',
-                          'One-time link · 4-digit PIN · 4 languages',
-                          'Enlace único · PIN de 4 dígitos · 4 idiomas',
-                          'Lien unique · PIN à 4 chiffres · 4 langues'
-                        )}
-                      </span>
-                    </div>
-
-                    {/* Interactive Step Switcher */}
-                    <div className="inline-flex items-center gap-1 bg-[#EAE5DA] p-0.5 rounded-lg text-[11px] font-mono-meta">
-                      <button
-                        type="button"
-                        onClick={() => setDemoShareStep('create')}
-                        className={`px-2 py-1 rounded-md transition-colors cursor-pointer ${
-                          demoShareStep === 'create'
-                            ? 'bg-[#1C1A18] text-[#FAF8F5]'
-                            : 'text-[#524D46] hover:text-[#1C1A18]'
-                        }`}
-                      >
-                        {tr('1. Wyślij', '1. Send', '1. Enviar', '1. Envoyer')}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setDemoShareStep('recipient_pin')}
-                        className={`px-2 py-1 rounded-md transition-colors cursor-pointer ${
-                          demoShareStep === 'recipient_pin'
-                            ? 'bg-[#1C1A18] text-[#FAF8F5]'
-                            : 'text-[#524D46] hover:text-[#1C1A18]'
-                        }`}
-                      >
-                        {tr('2. PIN', '2. PIN', '2. PIN', '2. PIN')}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setDemoShareStep('unlocked')}
-                        className={`px-2 py-1 rounded-md transition-colors cursor-pointer ${
-                          demoShareStep === 'unlocked'
-                            ? 'bg-[#1C1A18] text-[#FAF8F5]'
-                            : 'text-[#524D46] hover:text-[#1C1A18]'
-                        }`}
-                      >
-                        {tr('3. Odczyt', '3. Read', '3. Lectura', '3. Lecture')}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setDemoShareStep('burned')}
-                        className={`px-2 py-1 rounded-md transition-colors cursor-pointer ${
-                          demoShareStep === 'burned'
-                            ? 'bg-[#8B2635] text-[#FAF8F5]'
-                            : 'text-[#524D46] hover:text-[#1C1A18]'
-                        }`}
-                      >
-                        {tr('4. Zniszczony', '4. Burned', '4. Destruido', '4. Détruit')}
-                      </button>
-                    </div>
-                  </div>
-
-                  <p className="text-sm font-serif-literary text-[#524D46] leading-relaxed">
-                    {tr(
-                      'Czasem jeden moment z dziennika dotyczy kogoś bliskiego. Możesz podzielić się pojedynczym wpisem przez zaszyfrowany, jednorazowy link chroniony kodem PIN — opcjonalnie przetłumaczony na język odbiorcy (PL / EN / ES / FR). Po jednokrotnym otwarciu wpis ulega samozniszczeniu.',
-                      'Sometimes a single moment in your journal is meant for someone close. Share one chosen reflection via an encrypted, single-use link protected by a 4-digit PIN — optionally translated into the recipient’s language (PL / EN / ES / FR). Immediately after being read once, it self-destructs.',
-                      'Comparte una reflexión puntual con alguien cercano mediante un enlace cifrado de un solo uso protegido por PIN y traducido automáticamente si lo deseas. Tras leerse una vez, se autodestruye.',
-                      'Partagez une pensée choisie avec un proche via un lien chiffré à usage unique protégé par un code PIN et traduit si besoin. Dès la première lecture, il s’autodétruit.'
-                    )}
-                  </p>
-
-                  {/* Interactive One-Time Share Simulator Box */}
-                  <div className="rounded-xl bg-[#FAF8F5] border border-[#DDD6C8] p-5 space-y-4 shadow-2xs">
-                    {demoShareStep === 'create' && (
-                      <div className="space-y-4">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <span className="text-xs font-mono-meta text-[#524D46]">
-                            {tr(
-                              'Język dla bliskiej osoby (automatyczne tłumaczenie):',
-                              'Recipient language (automatic translation):',
-                              'Idioma para el destinatario:',
-                              'Langue du destinataire :'
-                            )}
-                          </span>
-                          <div className="inline-flex items-center gap-1 bg-[#F3EFE7] p-0.5 rounded-lg border border-[#E2DDD3] text-[11px] font-mono-meta">
-                            {(['pl', 'en', 'es', 'fr'] as const).map(l => (
-                              <button
-                                key={l}
-                                type="button"
-                                onClick={() => setDemoShareLang(l)}
-                                className={`px-2 py-0.5 rounded uppercase transition-colors cursor-pointer ${
-                                  demoShareLang === l
-                                    ? 'bg-[#1C1A18] text-[#FAF8F5]'
-                                    : 'text-[#524D46] hover:text-[#1C1A18]'
-                                }`}
-                              >
-                                {l}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="p-3.5 rounded-lg bg-[#F3EFE7]/85 border border-[#E2DDD3] space-y-1.5">
-                          <div className="text-[11px] font-mono-meta text-[#7A756D]">
-                            {demoSharedTranslations[demoShareLang].prompt}
-                          </div>
-                          <p className="text-sm font-serif-literary italic text-[#1C1A18] leading-relaxed">
-                            „{demoSharedTranslations[demoShareLang].body}”
-                          </p>
-                        </div>
-
-                        <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-                          <div className="flex items-center gap-2 text-xs font-mono-meta text-[#1C1A18]">
-                            <KeyRound className="w-3.5 h-3.5 text-[#8B2635]" />
-                            <span>PIN:</span>
-                            <span className="px-2 py-0.5 rounded bg-[#EFECE4] border border-[#DDD6C8] font-semibold tracking-widest">
-                              4829
-                            </span>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setDemoShareCopied(true);
-                                setTimeout(() => setDemoShareCopied(false), 1800);
-                              }}
-                              className="px-2.5 py-1.5 rounded border border-[#DDD6C8] bg-[#F5F2EB] hover:bg-[#EAE5DA] text-xs font-mono-meta text-[#524D46] hover:text-[#1C1A18] inline-flex items-center gap-1 cursor-pointer"
-                            >
-                              {demoShareCopied ? (
-                                <>
-                                  <Check className="w-3 h-3 text-[#2E5C33]" />
-                                  <span>{tr('Skopiowano', 'Copied', 'Copiado', 'Copié')}</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Copy className="w-3 h-3" />
-                                  <span>{tr('Kopiuj link + PIN', 'Copy link + PIN', 'Copiar enlace + PIN', 'Copier lien + PIN')}</span>
-                                </>
-                              )}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setDemoShareStep('recipient_pin')}
-                              className="px-3 py-1.5 rounded bg-[#1C1A18] hover:bg-[#33302B] text-[#FAF8F5] text-xs font-mono-meta inline-flex items-center gap-1 cursor-pointer"
-                            >
-                              <span>{tr('Zobacz widok odbiorcy →', 'Recipient view →', 'Vista receptor →', 'Vue destinataire →')}</span>
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {demoShareStep === 'recipient_pin' && (
-                      <div className="space-y-4 py-2 text-center">
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#F3EFE7] border border-[#E2DDD3] text-[11px] font-mono-meta text-[#524D46]">
-                          <Lock className="w-3 h-3 text-[#8B2635]" />
-                          <span>
-                            {tr(
-                              'Bartek przesyła Ci jednorazową myśl',
-                              'Bartek shared a one-time reflection with you',
-                              'Bartek compartió un pensamiento único contigo',
-                              'Bartek a partagé une pensée unique avec vous'
-                            )}
-                          </span>
-                        </div>
-
-                        <p className="text-xs font-serif-literary text-[#524D46] max-w-sm mx-auto">
-                          {tr(
-                            'Wpisz 4-cyfrowy kod PIN (4829), aby odszyfrować wiadomość w przeglądarce. Po odczytaniu link wygaśnie na zawsze.',
-                            'Enter the 4-digit PIN (4829) to decrypt this note in your browser. Once read, the link expires forever.',
-                            'Introduce el PIN de 4 dígitos (4829) para descifrar la nota. Al leerla, el enlace caduca para siempre.',
-                            'Saisissez le code PIN à 4 chiffres (4829) pour déchiffrer ce mot. Une fois lu, le lien expire définitivement.'
-                          )}
-                        </p>
-
-                        <div className="flex items-center justify-center gap-2">
-                          <input
-                            type="text"
-                            value={demoSharePinInput}
-                            onChange={e => setDemoSharePinInput(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                            className="w-28 text-center py-1.5 px-3 rounded border border-[#1C1A18] bg-[#F7F5F0] font-mono-meta text-sm tracking-widest text-[#1C1A18]"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setDemoShareStep('unlocked')}
-                            className="px-4 py-1.5 rounded bg-[#1C1A18] hover:bg-[#33302B] text-[#FAF8F5] text-xs font-mono-meta inline-flex items-center gap-1.5 cursor-pointer"
-                          >
-                            <Unlock className="w-3.5 h-3.5 text-[#EBC5CF]" />
-                            <span>{tr('Otwórz jednorazowo', 'Unlock once', 'Abrir una vez', 'Ouvrir une fois')}</span>
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {demoShareStep === 'unlocked' && (
-                      <div className="space-y-3.5">
-                        <div className="flex items-center justify-between text-[11px] font-mono-meta text-[#2E5C33]">
-                          <span className="inline-flex items-center gap-1">
-                            <Unlock className="w-3 h-3" />
-                            <span>
-                              {tr(
-                                'Odszyfrowano w przeglądarce · Kopia na serwerze usunięta',
-                                'Decrypted in browser · Server copy permanently deleted',
-                                'Descifrado en navegador · Copia del servidor eliminada',
-                                'Déchiffré dans le navigateur · Copie serveur supprimée'
-                              )}
-                            </span>
-                          </span>
-                          <span className="uppercase px-1.5 py-0.5 rounded bg-[#EBF2EB] border border-[#CCE2CC]">
-                            {demoShareLang}
-                          </span>
-                        </div>
-
-                        <div className="p-4 rounded-lg bg-[#F3EFE7] border border-[#E2DDD3] space-y-2">
-                          <div className="text-xs font-serif-literary text-[#6E6961]">
-                            {demoSharedTranslations[demoShareLang].prompt}
-                          </div>
-                          <p className="text-base font-serif-literary text-[#1C1A18] leading-relaxed">
-                            „{demoSharedTranslations[demoShareLang].body}”
-                          </p>
-                        </div>
-
-                        <div className="flex justify-end">
-                          <button
-                            type="button"
-                            onClick={() => setDemoShareStep('burned')}
-                            className="px-3 py-1.5 rounded border border-[#8B2635]/40 bg-[#FDF2F2] hover:bg-[#F9E2E2] text-xs font-mono-meta text-[#8B2635] cursor-pointer"
-                          >
-                            {tr(
-                              'Sprawdź co się stanie przy kolejnym wejściu w link →',
-                              'See what happens if someone opens the link again →',
-                              'Ver qué pasa al abrir el enlace de nuevo →',
-                              'Voir ce qui se passe si l’on rouvre le lien →'
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {demoShareStep === 'burned' && (
-                      <div className="py-4 text-center space-y-3">
-                        <div className="w-9 h-9 rounded-full bg-[#FDF2F2] border border-[#E8C5C5] text-[#8B2635] flex items-center justify-center mx-auto">
-                          <ShieldAlert className="w-4 h-4" />
-                        </div>
-                        <div className="space-y-1">
-                          <h4 className="text-base font-serif-literary font-medium text-[#1C1A18]">
-                            {tr(
-                              'Ten jednorazowy moment został już przeczytany i trwale usunięty.',
-                              'This one-time moment has already been read and permanently destroyed.',
-                              'Este momento único ya fue leído y destruido permanentemente.',
-                              'Ce moment unique a déjà été lu et définitivement détruit.'
-                            )}
-                          </h4>
-                          <p className="text-xs font-mono-meta text-[#7A756D]">
-                            {tr(
-                              'Nikt — łącznie z serwerem — nie może już odtworzyć tego linku.',
-                              'No one — including the server — can ever access this link again.',
-                              'Nadie puede volver a abrir este enlace.',
-                              'Personne ne peut plus accéder à ce lien.'
-                            )}
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setDemoShareStep('create')}
-                          className="px-3 py-1 rounded border border-[#DDD6C8] bg-[#F5F2EB] hover:bg-[#EAE5DA] text-[11px] font-mono-meta text-[#524D46] cursor-pointer"
-                        >
-                          {tr('← Pokaż od początku', '← Restart demo', '← Reiniciar demo', '← Recommencer')}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="pt-2 flex items-center justify-between gap-3 border-t border-[#EAE5DA]">
-                  <span className="text-[11px] font-mono-meta text-[#7A756D]">
-                    {tr(
-                      'Dostępne po zamknięciu dnia przyciskiem „Podziel się myślą”',
-                      'Available after sealing your day via “Share a thought”',
-                      'Disponible al cerrar el día con «Compartir pensamiento»',
-                      'Disponible après clôture du jour via « Partager une pensée »'
-                    )}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleSaveEntryTrigger}
-                    className="px-3 py-1.5 rounded border border-[#1C1A18] bg-[#1C1A18] hover:bg-[#33302B] text-xs font-mono-meta text-[#FAF8F5] inline-flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
-                  >
-                    <span>{tr('Wypróbuj u siebie', 'Try it yourself', 'Pruébalo', 'Essayer')}</span>
-                    <ArrowRight className="w-3 h-3" />
                   </button>
                 </div>
               </div>
@@ -3237,6 +2946,601 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
         </section>
 
+        {/* =====================================================================
+            3A. SEPARATE BLOCK 1 AFTER HINTS: STARS APPRECIATION CARD (GRAFIKA GWIAZDEK)
+           ===================================================================== */}
+        <section
+          id="appreciation-section"
+          className="border-t border-[#E5DFD3] bg-[#F3EFE7]/55 py-16 md:py-24"
+        >
+          <div className="max-w-6xl mx-auto px-6">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+              {/* Left Column: Explanation & Hand-Drawn Stars Graphic */}
+              <div className="lg:col-span-5 space-y-6">
+                <div className="space-y-3">
+                  <div className="inline-flex items-center gap-2.5 text-xs font-mono-meta text-[#8B2635]">
+                    {/* Hand-drawn 3-stars graphic */}
+                    <svg
+                      viewBox="0 0 44 24"
+                      className="w-9 h-5 shrink-0 overflow-visible"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M12 2 L14.2 8.8 L21 11 L14.2 13.2 L12 20 L9.8 13.2 L3 11 L9.8 8.8 Z"
+                        fill="#EBC5CF"
+                        stroke="#1C1A18"
+                        strokeWidth="1.5"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M31 2 L32.3 6.2 L36.5 7.5 L32.3 8.8 L31 13 L29.7 8.8 L25.5 7.5 L29.7 6.2 Z"
+                        fill="#FAF8F5"
+                        stroke="#1C1A18"
+                        strokeWidth="1.4"
+                        strokeLinejoin="round"
+                      />
+                      <circle cx="24" cy="18" r="2" fill="#8B2635" />
+                    </svg>
+                    <span>
+                      {tr(
+                        '03 · Ciepłe spojrzenie na ostatnie dni',
+                        '03 · Warm reflection on your recent days',
+                        '03 · Una mirada cálida a tus últimos días',
+                        '03 · Un regard chaleureux sur vos derniers jours'
+                      )}
+                    </span>
+                  </div>
+
+                  <h2
+                    className="text-3xl sm:text-4xl font-serif-literary text-[#1C1A18] leading-tight"
+                    style={{ textWrap: 'balance' }}
+                  >
+                    {tr(
+                      'Uważne docenienie Twoich ostatnich dni — bez oceniania i bez pośpiechu.',
+                      'A thoughtful appreciation of your recent days — without judgment or rush.',
+                      'Un reconocimiento cercano de tus últimos días — sin juicios ni prisas.',
+                      'Une appréciation attentive de vos derniers jours — sans jugement ni hâte.'
+                    )}
+                  </h2>
+
+                  <p className="text-base font-serif-literary text-[#524D46] leading-relaxed">
+                    {tr(
+                      'Co kilka zamkniętych dni obok przycisku Dziennika zapalają się małe gwiazdki. Kiedy w nie klikniesz, zobaczysz ciepłe, życzliwe podsumowanie, które dostrzega, gdzie odpuściłeś pośpiech, jak zadbałeś o spokój i dlaczego dobrze zrobiłeś.',
+                      'Every few sealed days, a small stars icon lights up next to your Journal button. Clicking it opens a warm, thoughtful summary noticing where you slowed down, how you protected your calm, and why you did well.',
+                      'Cada pocos días cerrados se iluminan unas pequeñas estrellas junto a tu Diario: un resumen cálido y cercano que destaca tus mejores decisiones recientes.',
+                      'Tous les quelques jours clôturés, de petites étoiles s’allument près de votre Journal : un résumé bienveillant qui souligne ce que vous avez bien fait.'
+                    )}
+                  </p>
+                </div>
+
+                {/* Illustrated Stars Badge & Calendar Integration */}
+                <div className="p-4 rounded-xl bg-[#FAF8F5] border border-[#E5DFD3] flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-[#F3EFE7] border border-[#DDD6C8] flex items-center justify-center shrink-0">
+                    <svg
+                      viewBox="0 0 48 48"
+                      className="w-10 h-10 overflow-visible"
+                      aria-hidden="true"
+                    >
+                      <circle cx="24" cy="24" r="19" fill="#FAF8F5" stroke="#DDD6C8" strokeWidth="1.2" strokeDasharray="3 3" />
+                      <path
+                        d="M21 8 L23.8 17.2 L33 20 L23.8 22.8 L21 32 L18.2 22.8 L9 20 L18.2 17.2 Z"
+                        fill="#EBC5CF"
+                        stroke="#1C1A18"
+                        strokeWidth="1.6"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M35 24 L36.5 29 L41.5 30.5 L36.5 32 L35 37 L33.5 32 L28.5 30.5 L33.5 29 Z"
+                        fill="#FAF8F5"
+                        stroke="#1C1A18"
+                        strokeWidth="1.5"
+                        strokeLinejoin="round"
+                      />
+                      <circle cx="14" cy="34" r="2" fill="#8B2635" />
+                    </svg>
+                  </div>
+                  <div className="space-y-1 text-xs font-serif-literary text-[#524D46] leading-relaxed">
+                    <div className="font-mono-meta text-[11px] uppercase tracking-wider text-[#1C1A18] font-medium">
+                      {tr(
+                        'Zapisane w Twoim kalendarzu (co 1–4 zamknięte dni)',
+                        'Saved in your calendar (every 1–4 sealed days)',
+                        'Guardado en tu calendario (cada 1–4 días cerrados)',
+                        'Enregistré dans votre calendrier (tous les 1–4 jours)'
+                      )}
+                    </div>
+                    <p>
+                      {tr(
+                        'Każda karta docenienia jest szyfrowana kluczem AES-256 i przypinana do dnia w Dzienniku, abyś mógł do niej wrócić w dowolnej chwili.',
+                        'Every appreciation card is encrypted with your AES-256 key and pinned to the day in your Journal so you can revisit it anytime.',
+                        'Cada tarjeta de aprecio se cifra con tu clave AES-256 y queda guardada en el día correspondiente de tu Diario.',
+                        'Chaque carte d’appréciation est chiffrée en AES-256 et épinglée au jour correspondant dans votre Journal.'
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Interactive Stars Appreciation Card Preview */}
+              <div className="lg:col-span-7">
+                <div className="bg-[#FAF8F5] border border-[#E2DDD3] rounded-2xl p-6 sm:p-8 space-y-5 shadow-2xs">
+                  <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-[#ECE7DC]">
+                    <div className="inline-flex items-center gap-2.5">
+                      <span className="w-8 h-8 rounded-full bg-[#EBC5CF]/75 border border-[#1C1A18] flex items-center justify-center text-[#1C1A18]">
+                        <Sparkles className="w-4 h-4 text-[#8B2635]" />
+                      </span>
+                      <span className="text-xs font-mono-meta uppercase tracking-wider text-[#8B2635] font-medium">
+                        {tr(
+                          'Karta docenienia · Podgląd na żywo',
+                          'Appreciation Card · Live preview',
+                          'Tarjeta de aprecio · Vista previa',
+                          'Carte d’appréciation · Aperçu'
+                        )}
+                      </span>
+                    </div>
+
+                    <div className="inline-flex items-center gap-1 bg-[#EAE5DA] p-0.5 rounded-lg text-[11px] font-mono-meta">
+                      <button
+                        type="button"
+                        onClick={() => setDemoSparkleIdx(0)}
+                        className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
+                          demoSparkleIdx === 0
+                            ? 'bg-[#1C1A18] text-[#FAF8F5]'
+                            : 'text-[#524D46] hover:text-[#1C1A18]'
+                        }`}
+                      >
+                        {tr('Przykład #1', 'Sample #1', 'Ejemplo #1', 'Exemple #1')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDemoSparkleIdx(1)}
+                        className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
+                          demoSparkleIdx === 1
+                            ? 'bg-[#1C1A18] text-[#FAF8F5]'
+                            : 'text-[#524D46] hover:text-[#1C1A18]'
+                        }`}
+                      >
+                        {tr('Przykład #2', 'Sample #2', 'Ejemplo #2', 'Exemple #2')}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono-meta text-[#7A756D]">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-[#F3EFE7] border border-[#E2DDD3] text-[#524D46]">
+                      <Calendar className="w-3 h-3 text-[#8B2635]" />
+                      <span>{activeDemoSparkle.periodLabel}</span>
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-[#2E5C33]">
+                      <Sparkles className="w-3 h-3 text-[#8B2635]" />
+                      <span>
+                        {tr('Gwiazdki w kalendarzu', 'Stars in calendar', 'Estrellas en calendario', 'Étoiles au calendrier')}
+                      </span>
+                    </span>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    <h3 className="text-xl sm:text-2xl font-serif-literary font-medium text-[#1C1A18] leading-snug">
+                      {activeDemoSparkle.greeting}
+                    </h3>
+                    <p className="text-sm sm:text-base font-serif-literary text-[#33302B] leading-relaxed">
+                      {activeDemoSparkle.content}
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-[#F3EFE7]/85 border border-[#E2DDD3] space-y-2">
+                    <div className="text-[10px] font-mono-meta uppercase tracking-wider text-[#8B2635] flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>
+                        {tr('Dlaczego to było dobre:', 'Why this mattered:', 'Por qué estuvo bien:', 'Pourquoi c’était précieux :')}
+                      </span>
+                    </div>
+                    <ul className="space-y-1.5">
+                      {activeDemoSparkle.highlights.map((h, i) => (
+                        <li
+                          key={i}
+                          className="flex items-start gap-2 text-xs sm:text-sm font-serif-literary text-[#1C1A18] leading-snug"
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#8B2635] mt-1.5 shrink-0" />
+                          <span>{h}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="pt-2 flex flex-wrap items-center justify-between gap-3 border-t border-[#EAE5DA]">
+                    <span className="text-[11px] font-mono-meta text-[#7A756D]">
+                      {tr(
+                        'Szyfrowane kluczem AES-256 i przypięte do dnia w Dzienniku',
+                        'AES-256 encrypted & pinned to the date in your Journal',
+                        'Cifrado con AES-256 y guardado en tu Diario',
+                        'Chiffré en AES-256 et épinglé dans votre Journal'
+                      )}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowDemoSparkleModal(true)}
+                      className="px-3.5 py-1.5 rounded border border-[#DDD6C8] bg-[#F5F2EB] hover:bg-[#EAE5DA] text-xs font-mono-meta text-[#1C1A18] inline-flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-[#8B2635]" />
+                      <span>{tr('Otwórz pełną kartę', 'Open full card', 'Abrir tarjeta', 'Ouvrir la carte')}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* =====================================================================
+            3B. SEPARATE BLOCK 2 AFTER HINTS: ONE-TIME ENCRYPTED SHARE WITH LOVED ONES
+           ===================================================================== */}
+        <section
+          id="share-section"
+          className="border-t border-[#E5DFD3] bg-[#FAF8F5] py-16 md:py-24"
+        >
+          <div className="max-w-6xl mx-auto px-6">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+              {/* Left Column: Explanation of One-Time Encrypted Sharing */}
+              <div className="lg:col-span-5 space-y-6">
+                <div className="space-y-3">
+                  <div className="inline-flex items-center gap-2 text-xs font-mono-meta text-[#2E5C33]">
+                    <Share2 className="w-4 h-4 text-[#2E5C33]" />
+                    <span>
+                      {tr(
+                        '04 · Dzielenie się z bliskimi',
+                        '04 · Sharing with loved ones',
+                        '04 · Compartir con los tuyos',
+                        '04 · Partager avec vos proches'
+                      )}
+                    </span>
+                  </div>
+
+                  <h2
+                    className="text-3xl sm:text-4xl font-serif-literary text-[#1C1A18] leading-tight"
+                    style={{ textWrap: 'balance' }}
+                  >
+                    {tr(
+                      'Podziel się wybranym momentem z bliską osobą — jednorazowo i z kodem PIN.',
+                      'Share a chosen moment with someone close — once and protected by a PIN.',
+                      'Comparte un momento elegido con alguien cercano — una sola vez y con PIN.',
+                      'Partagez un moment choisi avec un proche — une seule fois et protégé par PIN.'
+                    )}
+                  </h2>
+
+                  <p className="text-base font-serif-literary text-[#524D46] leading-relaxed">
+                    {tr(
+                      'Cały dziennik jest tylko dla Ciebie, ale czasem jeden zapisany moment dotyczy kogoś bliskiego. Wygeneruj zaszyfrowany, jednorazowy link chroniony 4-cyfrowym kodem PIN — opcjonalnie przetłumaczony na język odbiorcy (PL / EN / ES / FR). Po jednokrotnym przeczytaniu wiadomość ulega samozniszczeniu.',
+                      'Your journal is yours alone, yet sometimes a single moment is meant for someone close. Generate an encrypted, single-use link protected by a 4-digit PIN — optionally translated into the recipient’s language (PL / EN / ES / FR). Immediately after being read once, it self-destructs.',
+                      'Tu diario es solo para ti, pero a veces un momento está pensado para alguien cercano. Crea un enlace cifrado de un solo uso con PIN y traducción opcional que se autodestruye tras leerse una vez.',
+                      'Votre journal n’appartient qu’à vous, mais parfois une pensée est destinée à un proche. Créez un lien chiffré à usage unique protégé par PIN qui s’autodétruit dès la première lecture.'
+                    )}
+                  </p>
+                </div>
+
+                <div className="space-y-2 pt-3 border-t border-[#E5DFD3] text-xs font-mono-meta text-[#524D46]">
+                  <div>
+                    01.{' '}
+                    {tr(
+                      'Szyfrowanie w przeglądarce kluczem wyprowadzonym z kodu PIN',
+                      'Browser-side encryption derived from the 4-digit PIN',
+                      'Cifrado en el navegador derivado del código PIN',
+                      'Chiffrement dans le navigateur dérivé du code PIN'
+                    )}
+                  </div>
+                  <div>
+                    02.{' '}
+                    {tr(
+                      'Opcjonalne tłumaczenie wpisu w 1 kliknięcie (PL · EN · ES · FR)',
+                      'Optional 1-click translation (PL · EN · ES · FR)',
+                      'Traducción opcional en 1 clic (PL · EN · ES · FR)',
+                      'Traduction optionnelle en 1 clic (PL · EN · ES · FR)'
+                    )}
+                  </div>
+                  <div>
+                    03.{' '}
+                    {tr(
+                      'Automatyczne i trwałe usunięcie z serwera po pierwszym odczycie',
+                      'Automatic & permanent server deletion after first read',
+                      'Eliminación automática y permanente tras la primera lectura',
+                      'Suppression automatique et définitive après la première lecture'
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Interactive 4-Step Simulator */}
+              <div className="lg:col-span-7">
+                <div className="bg-[#F7F5F0] border border-[#E2DDD3] rounded-2xl p-6 sm:p-8 space-y-6 shadow-2xs">
+                  <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[#E5DFD3]">
+                    <div className="inline-flex items-center gap-2">
+                      <span className="w-7 h-7 rounded-full bg-[#EBF2EB] border border-[#1C1A18] flex items-center justify-center text-[#2E5C33]">
+                        <Share2 className="w-3.5 h-3.5 text-[#2E5C33]" />
+                      </span>
+                      <span className="text-xs font-mono-meta uppercase tracking-wider text-[#2E5C33] font-medium">
+                        {tr(
+                          'Jednorazowy link · 4-cyfrowy PIN · 4 języki',
+                          'One-time link · 4-digit PIN · 4 languages',
+                          'Enlace único · PIN de 4 dígitos · 4 idiomas',
+                          'Lien unique · PIN à 4 chiffres · 4 langues'
+                        )}
+                      </span>
+                    </div>
+
+                    {/* Interactive Step Switcher */}
+                    <div className="inline-flex items-center gap-1 bg-[#EAE5DA] p-0.5 rounded-lg text-[11px] font-mono-meta">
+                      <button
+                        type="button"
+                        onClick={() => setDemoShareStep('create')}
+                        className={`px-2 py-1 rounded-md transition-colors cursor-pointer ${
+                          demoShareStep === 'create'
+                            ? 'bg-[#1C1A18] text-[#FAF8F5]'
+                            : 'text-[#524D46] hover:text-[#1C1A18]'
+                        }`}
+                      >
+                        {tr('1. Wyślij', '1. Send', '1. Enviar', '1. Envoyer')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDemoShareStep('recipient_pin')}
+                        className={`px-2 py-1 rounded-md transition-colors cursor-pointer ${
+                          demoShareStep === 'recipient_pin'
+                            ? 'bg-[#1C1A18] text-[#FAF8F5]'
+                            : 'text-[#524D46] hover:text-[#1C1A18]'
+                        }`}
+                      >
+                        {tr('2. PIN', '2. PIN', '2. PIN', '2. PIN')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDemoShareStep('unlocked')}
+                        className={`px-2 py-1 rounded-md transition-colors cursor-pointer ${
+                          demoShareStep === 'unlocked'
+                            ? 'bg-[#1C1A18] text-[#FAF8F5]'
+                            : 'text-[#524D46] hover:text-[#1C1A18]'
+                        }`}
+                      >
+                        {tr('3. Odczyt', '3. Read', '3. Lectura', '3. Lecture')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDemoShareStep('burned')}
+                        className={`px-2 py-1 rounded-md transition-colors cursor-pointer ${
+                          demoShareStep === 'burned'
+                            ? 'bg-[#8B2635] text-[#FAF8F5]'
+                            : 'text-[#524D46] hover:text-[#1C1A18]'
+                        }`}
+                      >
+                        {tr('4. Zniszczony', '4. Burned', '4. Destruido', '4. Détruit')}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Interactive One-Time Share Simulator Box */}
+                  <div className="rounded-xl bg-[#FAF8F5] border border-[#DDD6C8] p-5 space-y-4 shadow-2xs">
+                    {demoShareStep === 'create' && (
+                      <div className="space-y-4">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <span className="text-xs font-mono-meta text-[#524D46]">
+                            {tr(
+                              'Język dla bliskiej osoby (automatyczne tłumaczenie):',
+                              'Recipient language (automatic translation):',
+                              'Idioma para el destinatario:',
+                              'Langue du destinataire :'
+                            )}
+                          </span>
+                          <div className="inline-flex items-center gap-1 bg-[#F3EFE7] p-0.5 rounded-lg border border-[#E2DDD3] text-[11px] font-mono-meta">
+                            {(['pl', 'en', 'es', 'fr'] as const).map(l => (
+                              <button
+                                key={l}
+                                type="button"
+                                onClick={() => setDemoShareLang(l)}
+                                className={`px-2 py-0.5 rounded uppercase transition-colors cursor-pointer ${
+                                  demoShareLang === l
+                                    ? 'bg-[#1C1A18] text-[#FAF8F5]'
+                                    : 'text-[#524D46] hover:text-[#1C1A18]'
+                                }`}
+                              >
+                                {l}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="p-3.5 rounded-lg bg-[#F3EFE7]/85 border border-[#E2DDD3] space-y-1.5">
+                          <div className="text-[11px] font-mono-meta text-[#7A756D]">
+                            {demoSharedTranslations[demoShareLang].prompt}
+                          </div>
+                          <p className="text-sm font-serif-literary italic text-[#1C1A18] leading-relaxed">
+                            „{demoSharedTranslations[demoShareLang].body}”
+                          </p>
+                        </div>
+
+                        <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                          <div className="flex items-center gap-2 text-xs font-mono-meta text-[#1C1A18]">
+                            <KeyRound className="w-3.5 h-3.5 text-[#8B2635]" />
+                            <span>PIN:</span>
+                            <span className="px-2 py-0.5 rounded bg-[#EFECE4] border border-[#DDD6C8] font-semibold tracking-widest">
+                              4829
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setDemoShareCopied(true);
+                                setTimeout(() => setDemoShareCopied(false), 1800);
+                              }}
+                              className="px-2.5 py-1.5 rounded border border-[#DDD6C8] bg-[#F5F2EB] hover:bg-[#EAE5DA] text-xs font-mono-meta text-[#524D46] hover:text-[#1C1A18] inline-flex items-center gap-1 cursor-pointer"
+                            >
+                              {demoShareCopied ? (
+                                <>
+                                  <Check className="w-3 h-3 text-[#2E5C33]" />
+                                  <span>{tr('Skopiowano', 'Copied', 'Copiado', 'Copié')}</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="w-3 h-3" />
+                                  <span>{tr('Kopiuj link + PIN', 'Copy link + PIN', 'Copiar enlace + PIN', 'Copier lien + PIN')}</span>
+                                </>
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setDemoShareStep('recipient_pin')}
+                              className="px-3 py-1.5 rounded bg-[#1C1A18] hover:bg-[#33302B] text-[#FAF8F5] text-xs font-mono-meta inline-flex items-center gap-1 cursor-pointer"
+                            >
+                              <span>{tr('Zobacz widok odbiorcy →', 'Recipient view →', 'Vista receptor →', 'Vue destinataire →')}</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {demoShareStep === 'recipient_pin' && (
+                      <div className="space-y-4 py-2 text-center">
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#F3EFE7] border border-[#E2DDD3] text-[11px] font-mono-meta text-[#524D46]">
+                          <Lock className="w-3 h-3 text-[#8B2635]" />
+                          <span>
+                            {tr(
+                              'Bartek przesyła Ci jednorazową myśl',
+                              'Bartek shared a one-time reflection with you',
+                              'Bartek compartió un pensamiento único contigo',
+                              'Bartek a partagé une pensée unique avec vous'
+                            )}
+                          </span>
+                        </div>
+
+                        <p className="text-xs font-serif-literary text-[#524D46] max-w-sm mx-auto">
+                          {tr(
+                            'Wpisz 4-cyfrowy kod PIN (4829), aby odszyfrować wiadomość w przeglądarce. Po odczytaniu link wygaśnie na zawsze.',
+                            'Enter the 4-digit PIN (4829) to decrypt this note in your browser. Once read, the link expires forever.',
+                            'Introduce el PIN de 4 dígitos (4829) para descifrar la nota. Al leerla, el enlace caduca para siempre.',
+                            'Saisissez le code PIN à 4 chiffres (4829) pour déchiffrer ce mot. Une fois lu, le lien expire définitivement.'
+                          )}
+                        </p>
+
+                        <div className="flex items-center justify-center gap-2">
+                          <input
+                            type="text"
+                            value={demoSharePinInput}
+                            onChange={e => setDemoSharePinInput(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                            className="w-28 text-center py-1.5 px-3 rounded border border-[#1C1A18] bg-[#F7F5F0] font-mono-meta text-sm tracking-widest text-[#1C1A18]"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setDemoShareStep('unlocked')}
+                            className="px-4 py-1.5 rounded bg-[#1C1A18] hover:bg-[#33302B] text-[#FAF8F5] text-xs font-mono-meta inline-flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <Unlock className="w-3.5 h-3.5 text-[#EBC5CF]" />
+                            <span>{tr('Otwórz jednorazowo', 'Unlock once', 'Abrir una vez', 'Ouvrir une fois')}</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {demoShareStep === 'unlocked' && (
+                      <div className="space-y-3.5">
+                        <div className="flex items-center justify-between text-[11px] font-mono-meta text-[#2E5C33]">
+                          <span className="inline-flex items-center gap-1">
+                            <Unlock className="w-3 h-3" />
+                            <span>
+                              {tr(
+                                'Odszyfrowano w przeglądarce · Kopia na serwerze usunięta',
+                                'Decrypted in browser · Server copy permanently deleted',
+                                'Descifrado en navegador · Copia del servidor eliminada',
+                                'Déchiffré dans le navigateur · Copie serveur supprimée'
+                              )}
+                            </span>
+                          </span>
+                          <span className="uppercase px-1.5 py-0.5 rounded bg-[#EBF2EB] border border-[#CCE2CC]">
+                            {demoShareLang}
+                          </span>
+                        </div>
+
+                        <div className="p-4 rounded-lg bg-[#F3EFE7] border border-[#E2DDD3] space-y-2">
+                          <div className="text-xs font-serif-literary text-[#6E6961]">
+                            {demoSharedTranslations[demoShareLang].prompt}
+                          </div>
+                          <p className="text-base font-serif-literary text-[#1C1A18] leading-relaxed">
+                            „{demoSharedTranslations[demoShareLang].body}”
+                          </p>
+                        </div>
+
+                        <div className="flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => setDemoShareStep('burned')}
+                            className="px-3 py-1.5 rounded border border-[#8B2635]/40 bg-[#FDF2F2] hover:bg-[#F9E2E2] text-xs font-mono-meta text-[#8B2635] cursor-pointer"
+                          >
+                            {tr(
+                              'Sprawdź co się stanie przy kolejnym wejściu w link →',
+                              'See what happens if someone opens the link again →',
+                              'Ver qué pasa al abrir el enlace de nuevo →',
+                              'Voir ce qui se passe si l’on rouvre le lien →'
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {demoShareStep === 'burned' && (
+                      <div className="py-4 text-center space-y-3">
+                        <div className="w-9 h-9 rounded-full bg-[#FDF2F2] border border-[#E8C5C5] text-[#8B2635] flex items-center justify-center mx-auto">
+                          <ShieldAlert className="w-4 h-4" />
+                        </div>
+                        <div className="space-y-1">
+                          <h4 className="text-base font-serif-literary font-medium text-[#1C1A18]">
+                            {tr(
+                              'Ten jednorazowy moment został już przeczytany i trwale usunięty.',
+                              'This one-time moment has already been read and permanently destroyed.',
+                              'Este momento único ya fue leído y destruido permanentemente.',
+                              'Ce moment unique a déjà été lu et définitivement détruit.'
+                            )}
+                          </h4>
+                          <p className="text-xs font-mono-meta text-[#7A756D]">
+                            {tr(
+                              'Nikt — łącznie z serwerem — nie może już odtworzyć tego linku.',
+                              'No one — including the server — can ever access this link again.',
+                              'Nadie puede volver a abrir este enlace.',
+                              'Personne ne peut plus accéder à ce lien.'
+                            )}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setDemoShareStep('create')}
+                          className="px-3 py-1 rounded border border-[#DDD6C8] bg-[#F5F2EB] hover:bg-[#EAE5DA] text-[11px] font-mono-meta text-[#524D46] cursor-pointer"
+                        >
+                          {tr('← Pokaż od początku', '← Restart demo', '← Reiniciar demo', '← Recommencer')}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="pt-2 flex items-center justify-between gap-3 border-t border-[#EAE5DA]">
+                    <span className="text-[11px] font-mono-meta text-[#7A756D]">
+                      {tr(
+                        'Dostępne po zamknięciu dnia przyciskiem „Podziel się myślą”',
+                        'Available after sealing your day via “Share a thought”',
+                        'Disponible al cerrar el día con «Compartir pensamiento»',
+                        'Disponible après clôture du jour via « Partager une pensée »'
+                      )}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleSaveEntryTrigger}
+                      className="px-3.5 py-1.5 rounded border border-[#1C1A18] bg-[#1C1A18] hover:bg-[#33302B] text-xs font-mono-meta text-[#FAF8F5] inline-flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
+                    >
+                      <span>{tr('Wypróbuj u siebie', 'Try it yourself', 'Pruébalo', 'Essayer')}</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* 4. WEEKLY LINE-ART CHARTS & WRITING STATISTICS SECTION */}
         <section id="stats-section" className="border-t border-[#E5DFD3] py-16 md:py-24">
           <div className="max-w-6xl mx-auto px-6">
@@ -3246,10 +3550,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <div className="space-y-3">
                   <div className="text-xs font-mono-meta text-[#7A756D]">
                     {tr(
-                      '03 · Wykresy i statystyki pisania',
-                      '03 · Charts & writing statistics',
-                      '03 · Gráficos y estadísticas',
-                      '03 · Graphiques et statistiques'
+                      '05 · Wykresy i statystyki pisania',
+                      '05 · Charts & writing statistics',
+                      '05 · Gráficos y estadísticas',
+                      '05 · Graphiques et statistiques'
                     )}
                   </div>
                   <h2
@@ -3653,10 +3957,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     <Smartphone className="w-4 h-4" />
                     <span>
                       {tr(
-                        '04 · Mobile + Prosta instalacja',
-                        '04 · Mobile + Simple Installation',
-                        '04 · Móvil + Instalación sencilla',
-                        '04 · Mobile + Installation simple'
+                        '06 · Mobile + Prosta instalacja',
+                        '06 · Mobile + Simple Installation',
+                        '06 · Móvil + Instalación sencilla',
+                        '06 · Mobile + Installation simple'
                       )}
                     </span>
                   </div>
@@ -3904,10 +4208,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     <ShieldCheck className="w-4 h-4" />
                     <span>
                       {tr(
-                        '05 · Szyfrowanie E2EE',
-                        '05 · E2EE Security',
-                        '05 · Cifrado E2EE',
-                        '05 · Chiffrement E2EE'
+                        '07 · Szyfrowanie E2EE',
+                        '07 · E2EE Security',
+                        '07 · Cifrado E2EE',
+                        '07 · Chiffrement E2EE'
                       )}
                     </span>
                   </div>

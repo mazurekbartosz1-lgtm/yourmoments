@@ -77,11 +77,11 @@ export const OneTimeShareModal: React.FC<OneTimeShareModalProps> = ({
   const formatContentForShare = (raw: string): string => {
     const withoutZeroWidth = raw.replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
     const lines = withoutZeroWidth.split('\n').map(line => {
-      // 1. Convert paired inline markers first
+      // 1. Convert paired inline markers first (*bold*, _italic_, *_bolditalic_*)
       let converted = line
-        .replace(/\u2063([^\u2063\n]+)\u2063/g, '***$1***')
-        .replace(/\u2062([^\u2062\n]+)\u2062/g, '**$1**')
-        .replace(/\u2064([^\u2064\n]+)\u2064/g, '*$1*');
+        .replace(/\u2063([^\u2063\n]+)\u2063/g, '*_$1_*')
+        .replace(/\u2062([^\u2062\n]+)\u2062/g, '*$1*')
+        .replace(/\u2064([^\u2064\n]+)\u2064/g, '_$1_');
 
       // 2. Convert line-leading \u2063 follow-up question marker
       if (converted.startsWith('\u2063')) {
