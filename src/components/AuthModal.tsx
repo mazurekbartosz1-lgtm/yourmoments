@@ -27,6 +27,7 @@ import {
   signOut,
   handleFirestoreError,
   OperationType,
+  formatFirebaseAuthError,
 } from '../services/firebase';
 import {
   User as FirebaseUser,
@@ -150,15 +151,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       onClose();
     } catch (err: unknown) {
       console.error('Login error:', err);
+      const formatted = formatFirebaseAuthError(err, lang);
       setErrorMsg(
-        err instanceof Error
-          ? err.message
-          : tr(
-              'Nie udało się zalogować przez Google.',
-              'Failed to sign in with Google.',
-              'No se pudo iniciar sesión con Google.',
-              'Impossible de se connecter avec Google.'
-            )
+        formatted ||
+          tr(
+            'Nie udało się zalogować przez Google.',
+            'Failed to sign in with Google.',
+            'No se pudo iniciar sesión con Google.',
+            'Impossible de se connecter avec Google.'
+          )
       );
     } finally {
       setLoading(false);

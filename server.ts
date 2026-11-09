@@ -6,6 +6,12 @@ import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
+import {
+  DAILY_PROMPTS,
+  getPromptSlug,
+  getPromptBySlug,
+  getPromptSeoDetails,
+} from './src/data/prompts';
 
 dotenv.config();
 
@@ -80,11 +86,10 @@ class SimpleLRUCache<V> {
   }
 }
 
-async function startServer() {
-  const app = express();
-  const PORT = 3000;
+export const app = express();
+const PORT = Number(process.env.PORT) || 3000;
 
-  app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '10mb' }));
 
   const ai = new GoogleGenAI({
     apiKey: process.env.GEMINI_API_KEY,
@@ -959,16 +964,187 @@ Return strictly valid JSON with two keys:
     });
   });
 
+  // 8. Programmatic SEO: /robots.txt, /sitemap.xml & Server-Side Pre-Rendering for /prompts/:slug
+  function escapeHtml(str: string): string {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  app.get('/robots.txt', (req, res) => {
+    const baseUrl = `${req.protocol}://${req.get('host') || 'yourmoments.vercel.app'}`;
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    return res.send(
+      `User-agent: *\nAllow: /\nAllow: /prompts\nAllow: /prompts/\nSitemap: ${baseUrl}/sitemap.xml\n`
+    );
+  });
+
+  app.get('/sitemap.xml', (_req, res) => {
+    const baseUrl = 'https://yourmoments.vercel.app';
+    const todayIso = new Date().toISOString().slice(0, 10);
+    const urls = [
+      `  <url>\n    <loc>${baseUrl}/</loc>\n    <lastmod>${todayIso}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>1.0</priority>\n  </url>`,
+      `  <url>\n    <loc>${baseUrl}/prompts</loc>\n    <lastmod>${todayIso}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.9</priority>\n  </url>`,
+      ...DAILY_PROMPTS.map(p => {
+        const slug = getPromptSlug(p);
+        return `  <url>\n    <loc>${baseUrl}/prompts/${slug}</loc>\n    <lastmod>${todayIso}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.8</priority>\n  </url>`;
+      }),
+    ];
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join(
+      '\n'
+    )}\n</urlset>`;
+    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+    return res.send(xml);
+  });
+
+  function injectProgrammaticPromptSeo(rawHtml: string, reqPath: string): string {
+    const baseUrl = 'https://yourmoments.vercel.app';
+    if (reqPath === '/prompts' || reqPath === '/prompts/') {
+      const title = 'Biblioteka pytań do dziennika i codziennej refleksji (47 Prompts) | Momenty';
+      const desc =
+        'Odkryj 47 pytań do codziennej refleksji, wdzięczności, uważności i radzenia sobie z wypaleniem (Overcoming Burnout, Evening Gratitude). Zacznij pisać od razu na stronie bez logowania.';
+      const canonicalUrl = `${baseUrl}/prompts`;
+
+      const listItemsHtml = DAILY_PROMPTS.map(p => {
+        const s = getPromptSlug(p);
+        return `<li><a href="/prompts/${escapeHtml(s)}">${escapeHtml(p.promptPl)} — ${escapeHtml(
+          p.promptEn
+        )}</a></li>`;
+      }).join('\n');
+
+      const prerenderedRoot = `<div id="root"><main class="max-w-5xl mx-auto px-6 py-14 font-serif"><header class="mb-8"><a href="/">← Momenty / Moments</a></header><h1>${escapeHtml(
+        title
+      )}</h1><p>${escapeHtml(desc)}</p><ul>${listItemsHtml}</ul></main></div>`;
+
+      return rawHtml
+        .replace(/<title>[\s\S]*?<\/title>/i, `<title>${escapeHtml(title)}</title>`)
+        .replace(
+          /<meta name="description" content="[^"]*"\s*\/?>/i,
+          `<meta name="description" content="${escapeHtml(desc)}" />`
+        )
+        .replace(
+          /<link rel="canonical" href="[^"]*"\s*\/?>/i,
+          `<link rel="canonical" href="${canonicalUrl}" />`
+        )
+        .replace(
+          /<meta property="og:title" content="[^"]*"\s*\/?>/i,
+          `<meta property="og:title" content="${escapeHtml(title)}" />`
+        )
+        .replace(
+          /<meta property="og:description" content="[^"]*"\s*\/?>/i,
+          `<meta property="og:description" content="${escapeHtml(desc)}" />`
+        )
+        .replace(
+          /<meta property="og:url" content="[^"]*"\s*\/?>/i,
+          `<meta property="og:url" content="${canonicalUrl}" />`
+        )
+        .replace(/<div id="root">[\s\S]*?<\/div>\s*(?=<script)/i, `${prerenderedRoot}\n    `);
+    }
+
+    if (reqPath.startsWith('/prompts/')) {
+      const slug = decodeURIComponent(reqPath.slice('/prompts/'.length).replace(/\/+$/, ''));
+      const matched = getPromptBySlug(slug);
+      if (matched) {
+        const seoPl = getPromptSeoDetails(matched, 'pl');
+        const seoEn = getPromptSeoDetails(matched, 'en');
+        const title = `${matched.promptPl} (${matched.promptEn}) | Momenty`;
+        const desc = `${matched.hintPl} ${matched.hintEn}`;
+        const canonicalUrl = `${baseUrl}/prompts/${seoPl.slug}`;
+
+        const followUpsHtml = seoPl.followUpQuestions
+          .map(q => `<li>${escapeHtml(q)}</li>`)
+          .join('');
+
+        const prerenderedRoot = `<div id="root"><article class="max-w-4xl mx-auto px-6 py-14 font-serif"><nav><a href="/">Momenty</a> · <a href="/prompts">Prompts</a> · <span>${escapeHtml(
+          seoPl.categoryLabel
+        )}</span></nav><h1>${escapeHtml(matched.promptPl)}</h1><h2>${escapeHtml(
+          matched.promptEn
+        )}</h2><p>${escapeHtml(matched.hintPl)}</p><p>${escapeHtml(
+          seoPl.reflectionGuide
+        )}</p><h3>Pytania pomocnicze na marginesie:</h3><ul>${followUpsHtml}</ul></article></div>`;
+
+        return rawHtml
+          .replace(/<title>[\s\S]*?<\/title>/i, `<title>${escapeHtml(title)}</title>`)
+          .replace(
+            /<meta name="description" content="[^"]*"\s*\/?>/i,
+            `<meta name="description" content="${escapeHtml(desc)}" />`
+          )
+          .replace(
+            /<link rel="canonical" href="[^"]*"\s*\/?>/i,
+            `<link rel="canonical" href="${canonicalUrl}" />`
+          )
+          .replace(
+            /<meta property="og:title" content="[^"]*"\s*\/?>/i,
+            `<meta property="og:title" content="${escapeHtml(title)}" />`
+          )
+          .replace(
+            /<meta property="og:description" content="[^"]*"\s*\/?>/i,
+            `<meta property="og:description" content="${escapeHtml(desc)}" />`
+          )
+          .replace(
+            /<meta property="og:url" content="[^"]*"\s*\/?>/i,
+            `<meta property="og:url" content="${canonicalUrl}" />`
+          )
+          .replace(/<div id="root">[\s\S]*?<\/div>\s*(?=<script)/i, `${prerenderedRoot}\n    `);
+      }
+    }
+
+    return rawHtml;
+  }
+
+  // Handle SSR SEO injection for /prompts and /prompts/:slug in production & Vercel serverless
+  app.get(['/prompts', '/prompts/:slug'], (req, res, next) => {
+    const distHtmlPath = path.resolve(__dirname, 'dist', 'index.html');
+    const rootHtmlPath = path.resolve(__dirname, 'index.html');
+    const targetPath = fs.existsSync(distHtmlPath) ? distHtmlPath : rootHtmlPath;
+
+    if (process.env.NODE_ENV === 'production' || process.env.VERCEL) {
+      try {
+        const rawHtml = fs.readFileSync(targetPath, 'utf-8');
+        const injected = injectProgrammaticPromptSeo(rawHtml, req.path);
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        return res.send(injected);
+      } catch {
+        return next();
+      }
+    }
+    return next();
+  });
+
+async function startServer() {
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
     });
+
+    app.get(['/prompts', '/prompts/:slug'], async (req, res, next) => {
+      try {
+        const rawHtml = fs.readFileSync(path.resolve(__dirname, 'index.html'), 'utf-8');
+        const transformed = await vite.transformIndexHtml(req.originalUrl, rawHtml);
+        const injected = injectProgrammaticPromptSeo(transformed, req.path);
+        res.status(200).set({ 'Content-Type': 'text/html; charset=utf-8' }).end(injected);
+      } catch (e) {
+        next(e);
+      }
+    });
+
     app.use(vite.middlewares);
   } else {
     app.use(express.static(path.resolve(__dirname, 'dist')));
     app.get('*', (req, res) => {
-      res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));
+      const distHtmlPath = path.resolve(__dirname, 'dist', 'index.html');
+      try {
+        const rawHtml = fs.readFileSync(distHtmlPath, 'utf-8');
+        const injected = injectProgrammaticPromptSeo(rawHtml, req.path);
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        return res.send(injected);
+      } catch {
+        return res.sendFile(distHtmlPath);
+      }
     });
   }
 
@@ -977,7 +1153,11 @@ Return strictly valid JSON with two keys:
   });
 }
 
-startServer().catch(err => {
-  console.error('Failed to start server:', err);
-  process.exit(1);
-});
+if (!process.env.VERCEL) {
+  startServer().catch(err => {
+    console.error('Failed to start server:', err);
+    process.exit(1);
+  });
+}
+
+export default app;

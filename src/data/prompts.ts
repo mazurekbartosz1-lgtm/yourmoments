@@ -3,6 +3,7 @@ export type Language = 'pl' | 'en' | 'es' | 'fr';
 
 export interface DailyPrompt {
   id: string;
+  slug?: string;
   category: PromptCategory;
   categoryLabel: string;
   promptPl: string;
@@ -644,6 +645,7 @@ export const DAILY_PROMPTS: DailyPrompt[] = [
   },
   {
     id: 'p-45',
+    slug: 'daily-nature-respite',
     category: 'gratitude',
     categoryLabel: 'Wdzięczność',
     promptPl: 'Jaki fragment przyrody — drzewo za oknem, park, niebo nad ulicą — daje Ci co dzień chwilę wytchnienia?',
@@ -655,7 +657,287 @@ export const DAILY_PROMPTS: DailyPrompt[] = [
     hintEs: '¿Cómo cambia semana a semana ante tus ojos?',
     hintFr: 'Comment évolue-t-il semaine après semaine sous vos yeux ?',
   },
+  {
+    id: 'p-46',
+    slug: 'overcoming-burnout',
+    category: 'reflection',
+    categoryLabel: 'Refleksja',
+    promptPl: 'Kiedy ostatnio poczułeś przeciążenie lub wypalenie — i jaki jeden mały ciężar możesz dziś świadomie odłożyć na bok?',
+    promptEn: 'When did you last feel stretched thin or burned out — and what one small weight can you consciously set down today?',
+    promptEs: '¿Cuándo te sentiste por última vez agotado o saturado, y qué pequeña carga puedes dejar conscientemente a un lado hoy?',
+    promptFr: 'Quand vous êtes-vous senti épuisé ou surmené pour la dernière fois — et quel petit poids pouvez-vous déposer consciemment aujourd’hui ?',
+    hintPl: 'Nazwij jedną rzecz, której nie musisz dzisiaj udowadniać ani kończyć na siłę.',
+    hintEn: 'Name one expectation you do not need to prove or force to completion today.',
+    hintEs: 'Nombra una expectativa que hoy no necesites demostrar ni forzar.',
+    hintFr: 'Nommez une attente que vous n’avez pas besoin de prouver ni de forcer aujourd’hui.',
+  },
+  {
+    id: 'p-47',
+    slug: 'evening-gratitude',
+    category: 'gratitude',
+    categoryLabel: 'Wdzięczność',
+    promptPl: 'Zanim zamkniesz dzisiejszy dzień: jaka jedna spokojna chwila, rozmowa lub drobiazg sprawiły, że warto było przez niego przejść?',
+    promptEn: 'Before closing today: what single quiet moment, conversation, or small detail made the day worth walking through?',
+    promptEs: 'Antes de cerrar el día de hoy: ¿qué momento tranquilo, conversación o pequeño detalle hizo que valiera la pena?',
+    promptFr: 'Avant de clore cette journée : quel moment paisible, échange ou détail a rendu ce jour précieux ?',
+    hintPl: 'Skup się na czymś małym i prawdziwym, co wydarzyło się między wierszami dnia.',
+    hintEn: 'Focus on something small and genuine that happened between the lines of your day.',
+    hintEs: 'Concéntrate en algo pequeño y auténtico que ocurrió entre líneas hoy.',
+    hintFr: 'Concentrez-vous sur quelque chose de simple et vrai survenu aujourd’hui.',
+  },
 ];
+
+const CURATED_PROMPT_SLUGS: Record<string, string> = {
+  'p-01': 'sensory-memory-of-taste',
+  'p-02': 'photograph-outside-the-frame',
+  'p-03': 'subtle-act-of-kindness',
+  'p-04': 'quiet-morning-before-screens',
+  'p-05': 'background-sound-that-stopped-time',
+  'p-06': 'calming-sentence-to-past-self',
+  'p-07': 'everyday-object-marks-of-time',
+  'p-08': 'unspoken-gratitude-to-someone',
+  'p-09': 'place-where-time-slows-down',
+  'p-10': 'habit-that-brings-calm',
+  'p-45': 'daily-nature-respite',
+  'p-46': 'overcoming-burnout',
+  'p-47': 'evening-gratitude',
+};
+
+export function slugifyPromptText(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .split(/\s+/)
+    .slice(0, 6)
+    .join('-')
+    .replace(/-+/g, '-');
+}
+
+export function getPromptSlug(prompt: DailyPrompt): string {
+  if (prompt.slug) return prompt.slug;
+  if (CURATED_PROMPT_SLUGS[prompt.id]) return CURATED_PROMPT_SLUGS[prompt.id];
+  const generated = slugifyPromptText(prompt.promptEn || prompt.id);
+  return generated ? `${generated}-${prompt.id}` : prompt.id;
+}
+
+export function getPromptBySlug(slugOrId: string): DailyPrompt | undefined {
+  const clean = decodeURIComponent(slugOrId || '').trim().toLowerCase();
+  if (!clean) return undefined;
+  return DAILY_PROMPTS.find(
+    p =>
+      p.id.toLowerCase() === clean ||
+      getPromptSlug(p).toLowerCase() === clean ||
+      slugifyPromptText(p.promptEn).toLowerCase() === clean
+  );
+}
+
+export interface PromptSeoDetails {
+  slug: string;
+  urlPath: string;
+  title: string;
+  metaDescription: string;
+  categoryLabel: string;
+  promptText: string;
+  hintText: string;
+  reflectionGuide: string;
+  followUpQuestions: string[];
+}
+
+export function getPromptSeoDetails(
+  prompt: DailyPrompt,
+  lang: Language = 'pl'
+): PromptSeoDetails {
+  const slug = getPromptSlug(prompt);
+  const urlPath = `/prompts/${slug}`;
+  const promptText = getPromptText(prompt, lang);
+  const hintText = getHintText(prompt, lang);
+  const categoryLabel = getCategoryLabel(prompt.category, lang);
+
+  const isEn = lang === 'en';
+  const isEs = lang === 'es';
+  const isFr = lang === 'fr';
+
+  const shortQuestion =
+    promptText.length > 52 ? `${promptText.slice(0, 49).trim()}...` : promptText;
+
+  const title = isEn
+    ? `${shortQuestion} | Moments — Daily Reflection Prompt`
+    : isEs
+    ? `${shortQuestion} | Moments — Pregunta de Reflexión Diaria`
+    : isFr
+    ? `${shortQuestion} | Moments — Question de Réflexion Quotidienne`
+    : `${shortQuestion} | Momenty — Pytanie do Dziennika`;
+
+  const metaDescription = isEn
+    ? `Reflect on "${promptText}" (${categoryLabel}). Write your private, end-to-end encrypted journal entry right on the page — no sign-up wall required to start.`
+    : isEs
+    ? `Reflexiona sobre «${promptText}» (${categoryLabel}). Escribe tu entrada privada con cifrado de extremo a extremo directamente en la página.`
+    : isFr
+    ? `Réfléchissez à « ${promptText} » (${categoryLabel}). Écrivez votre entrée privée chiffrée de bout en bout directement sur la page.`
+    : `Zatrzymaj się przy pytaniu: „${promptText}” (${categoryLabel}). Zapisz swoją refleksję od razu na stronie w prywatnym dzienniku z szyfrowaniem end-to-end.`;
+
+  const reflectionGuideByCategory: Record<PromptCategory, { pl: string; en: string; es: string; fr: string }> = {
+    sensory: {
+      pl: 'Uważność zmysłowa pozwala wyjść z natłoku abstrakcyjnych zmartwień i zakotwiczyć pamięć w konkretnym detalu — zapachu, temperaturze, świetle lub dźwięku. Wystarczą trzy spokojne zdania.',
+      en: 'Sensory mindfulness pulls you out of abstract overthinking and anchors memory in a concrete detail — a scent, temperature, light, or sound. Three unhurried sentences are enough.',
+      es: 'La atención sensorial te saca del exceso de pensamientos abstractos y ancla la memoria en un detalle concreto: un aroma, luz o sonido.',
+      fr: 'L’attention sensorielle vous sort du flot de pensées abstraites et ancre la mémoire dans un détail concret — un arôme, une lumière ou un son.',
+    },
+    memory: {
+      pl: 'Wspomnienia zapisane własnymi słowami nie blakną z upływem lat. Zamiast opisywać całe wydarzenie, uchwyć pojedynczą scenę i to, co działo się tuż poza kadrem.',
+      en: 'Memories written in your own words do not fade with the years. Instead of summarizing a whole event, capture a single scene and what happened just outside the frame.',
+      es: 'Los recuerdos escritos con tus propias palabras no se desvanecen con los años. Captura una sola escena y lo que ocurrió fuera del encuadre.',
+      fr: 'Les souvenirs écrits avec vos propres mots ne s’effacent pas avec les années. Capturez une seule scène et ce qui se passait hors du cadre.',
+    },
+    gratitude: {
+      pl: 'Wieczorna wdzięczność nie polega na wymuszonym optymizmie, lecz na zauważeniu jednego prawdziwego drobiazgu, który dał Ci dziś odrobinę ciepła lub spokoju.',
+      en: 'Evening gratitude is not forced optimism — it is noticing one genuine small thing that brought you warmth, relief, or quietness today.',
+      es: 'La gratitud nocturna no es optimismo forzado, sino notar un detalle auténtico que te dio calma o calidez hoy.',
+      fr: 'La gratitude du soir n’est pas un optimisme forcé, mais l’art de remarquer un détail sincère qui vous a apporté du calme aujourd’hui.',
+    },
+    reflection: {
+      pl: 'Spokojna refleksja pomaga oddzielić to, co naprawdę ważne, od codziennego szumu i przeciążenia. Pisz szczerze, tylko dla siebie — tekst jest szyfrowany przed zapisem.',
+      en: 'Quiet reflection helps separate what truly matters from daily noise and burnout. Write honestly, just for yourself — your words are encrypted before saving.',
+      es: 'La reflexión tranquila ayuda a separar lo que realmente importa del ruido diario y el agotamiento. Escribe con sinceridad solo para ti.',
+      fr: 'La réflexion paisible aide à séparer l’essentiel du bruit quotidien et de l’épuisement. Écrivez sincèrement, uniquement pour vous.',
+    },
+    vision: {
+      pl: 'Patrzenie w przyszłość bez presji listy zadań pozwala usłyszeć własne potrzeby. Wyobraź sobie jedno miejsce, rytm dnia lub uczucie, do którego chcesz się zbliżyć.',
+      en: 'Looking ahead without the pressure of a to-do list lets you hear your own needs. Picture a single place, daily rhythm, or feeling you want to move toward.',
+      es: 'Mirar hacia adelante sin la presión de una lista de tareas te permite escuchar tus propias necesidades.',
+      fr: 'Regarder vers l’avenir sans la pression d’une liste de tâches permet d’écouter vos vrais besoins.',
+    },
+  };
+
+  const followUpsByCategory: Record<PromptCategory, { pl: string[]; en: string[]; es: string[]; fr: string[] }> = {
+    sensory: {
+      pl: [
+        'Jaki pojedynczy dźwięk lub zapach najmocniej kojarzy Ci się z tą chwilą?',
+        'Gdzie dokładnie wtedy byłeś i jakie światło panowało wokół?',
+        'Jak Twoje ciało zareagowało na ten bodziec — napięciem czy rozluźnieniem?',
+      ],
+      en: [
+        'What single sound or scent do you associate most strongly with this moment?',
+        'Where exactly were you, and what was the light like around you?',
+        'How did your body respond — with tension or with calm release?',
+      ],
+      es: [
+        '¿Qué sonido o aroma asocias con más fuerza a este momento?',
+        '¿Dónde estabas exactamente y cómo era la luz a tu alrededor?',
+        '¿Cómo reaccionó tu cuerpo: con tensión o con calma?',
+      ],
+      fr: [
+        'Quel son ou quel parfum associez-vous le plus fortement à cet instant ?',
+        'Où étiez-vous exactement et comment était la lumière autour de vous ?',
+        'Comment votre corps a-t-il réagi — par de la tension ou de l’apaisement ?',
+      ],
+    },
+    memory: {
+      pl: [
+        'Kto jeszcze był wtedy w pobliżu lub o kim wtedy pomyślałeś?',
+        'Jaki drobny szczegół z tamtej chwili pamiętasz najdokładniej?',
+        'Co powiedziałbyś dzisiaj osobie, którą wtedy byłeś?',
+      ],
+      en: [
+        'Who else was nearby, or who crossed your mind in that moment?',
+        'What small detail from that scene do you remember most vividly?',
+        'What would you say today to the person you were back then?',
+      ],
+      es: [
+        '¿Quién más estaba cerca o en quién pensaste en ese instante?',
+        '¿Qué pequeño detalle de esa escena recuerdas con mayor nitidez?',
+        '¿Qué le dirías hoy a la persona que eras entonces?',
+      ],
+      fr: [
+        'Qui d’autre était présent ou à qui avez-vous pensé à cet instant ?',
+        'Quel petit détail de cette scène vous revient le plus clairement ?',
+        'Que diriez-vous aujourd’hui à la personne que vous étiez alors ?',
+      ],
+    },
+    gratitude: {
+      pl: [
+        'Dlaczego akurat ten drobiazg zapadł Ci dzisiaj w pamięć?',
+        'Czy osoba, której jesteś wdzięczny, wie, ile to dla Ciebie znaczyło?',
+        'Jak zmienił się Twój nastrój, kiedy to zauważyłeś?',
+      ],
+      en: [
+        'Why did this particular detail stand out to you today?',
+        'Does the person involved know how much that moment meant to you?',
+        'How did your mood shift once you noticed it?',
+      ],
+      es: [
+        '¿Por qué te llamó la atención precisamente ese detalle hoy?',
+        '¿Sabe esa persona cuánto significó ese gesto para ti?',
+        '¿Cómo cambió tu estado de ánimo al notarlo?',
+      ],
+      fr: [
+        'Pourquoi ce détail particulier a-t-il retenu votre attention aujourd’hui ?',
+        'La personne concernée sait-elle à quel point cela a compté pour vous ?',
+        'Comment votre humeur a-t-elle évolué en le remarquant ?',
+      ],
+    },
+    reflection: {
+      pl: [
+        'Co w tej sytuacji zależy bezpośrednio od Ciebie, a co możesz spokojnie odpuścić?',
+        'Jaka myśl powracała do Ciebie najczęściej w ciągu ostatnich godzin?',
+        'Gdybyś miał zadbać o siebie dziś wieczorem w jeden prosty sposób, co by to było?',
+      ],
+      en: [
+        'What part of this is within your control, and what can you gently let go of?',
+        'Which thought kept returning to you over the past few hours?',
+        'If you could care for yourself in one simple way tonight, what would it be?',
+      ],
+      es: [
+        '¿Qué parte de esto depende de ti y qué puedes soltar con calma?',
+        '¿Qué pensamiento volvió con más frecuencia en las últimas horas?',
+        'Si pudieras cuidarte de una forma sencilla esta noche, ¿cuál sería?',
+      ],
+      fr: [
+        'Quelle part dépend de vous, et que pouvez-vous laisser aller sereinement ?',
+        'Quelle pensée est revenue le plus souvent ces dernières heures ?',
+        'Si vous pouviez prendre soin de vous simplement ce soir, que feriez-vous ?',
+      ],
+    },
+    vision: {
+      pl: [
+        'Jaki jeden mały krok przybliżyłby Cię do tego stanu już w tym tygodniu?',
+        'Jak wyglądałby Twój poranek, gdyby ta wizja stała się codziennością?',
+        'Co musiałbyś pożegnać, żeby zrobić na to miejsce?',
+      ],
+      en: [
+        'What single small step could bring you closer to this feeling this week?',
+        'What would your morning look like if this vision became your everyday rhythm?',
+        'What would you need to set aside to make room for it?',
+      ],
+      es: [
+        '¿Qué pequeño paso podría acercarte a esa sensación esta misma semana?',
+        '¿Cómo sería tu mañana si esa visión fuera tu ritmo diario?',
+        '¿Qué tendrías que dejar atrás para hacerle espacio?',
+      ],
+      fr: [
+        'Quel petit pas pourrait vous rapprocher de cet état dès cette semaine ?',
+        'À quoi ressemblerait votre matinée si cette vision devenait votre quotidien ?',
+        'Que devriez-vous laisser de côté pour lui faire de la place ?',
+      ],
+    },
+  };
+
+  const guideObj = reflectionGuideByCategory[prompt.category] || reflectionGuideByCategory.reflection;
+  const followObj = followUpsByCategory[prompt.category] || followUpsByCategory.reflection;
+
+  return {
+    slug,
+    urlPath,
+    title,
+    metaDescription,
+    categoryLabel,
+    promptText,
+    hintText,
+    reflectionGuide: isEn ? guideObj.en : isEs ? guideObj.es : isFr ? guideObj.fr : guideObj.pl,
+    followUpQuestions: isEn ? followObj.en : isEs ? followObj.es : isFr ? followObj.fr : followObj.pl,
+  };
+}
 
 const MONTHLY_PROMPT_LOG_KEY = 'kronika_monthly_prompt_log';
 

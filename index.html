@@ -3,28 +3,196 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
-    <title>Momenty / Moments</title>
-    <meta name="description" content="Momenty / Moments — cicha przestrzeń codziennego pisania z pytaniem dnia, podpowiedziami na marginesie, towarzyszem przy biurku i szyfrowaniem end-to-end." />
+    <title>Momenty / Moments — Cicha kartka na Twoje codzienne momenty</title>
+    <meta name="description" content="Momenty / Moments — cicha przestrzeń codziennego pisania z pytaniem dnia, podpowiedziami na marginesie, dyktowaniem głosowym i szyfrowaniem end-to-end AES-256. Pisz od razu bez logowania." />
+    <meta name="robots" content="index, follow" />
     <meta name="theme-color" content="#F7F5F0" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Momenty" />
+    <link rel="canonical" href="https://yourmoments.vercel.app/" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
-    <meta property="og:title" content="Momenty / Moments" />
-    <meta property="og:description" content="Momenty / Moments — cicha przestrzeń codziennego pisania z pytaniem dnia, podpowiedziami na marginesie, towarzyszem przy biurku i szyfrowaniem end-to-end." />
+
+    <!-- OpenGraph Social Cards -->
     <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Momenty / Moments" />
+    <meta property="og:url" content="https://yourmoments.vercel.app/" />
+    <meta property="og:title" content="Momenty / Moments — Cicha kartka na Twoje codzienne momenty" />
+    <meta property="og:description" content="Jedno pytanie dziennie, podpowiedzi na marginesie, dyktowanie głosem i szyfrowanie end-to-end AES-256. Zacznij pisać od razu na stronie bez zakładania konta." />
+    <meta property="og:image" content="https://yourmoments.vercel.app/pwa-512x512.png" />
+
+    <!-- Twitter Cards -->
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Momenty / Moments — Cicha kartka na Twoje codzienne momenty" />
+    <meta name="twitter:description" content="Jedno pytanie dziennie, podpowiedzi na marginesie, dyktowanie głosem i szyfrowanie end-to-end AES-256. Zacznij pisać od razu na stronie." />
+    <meta name="twitter:image" content="https://yourmoments.vercel.app/pwa-512x512.png" />
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Lora:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+    <!-- Schema.org JSON-LD: WebApplication + ItemList of Programmatic Prompts + FAQPage -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebApplication",
+            "name": "Momenty / Moments",
+            "alternateName": "Kronika Dnia",
+            "url": "https://yourmoments.vercel.app/",
+            "applicationCategory": "LifestyleApplication",
+            "operatingSystem": "Web, Android, iOS",
+            "description": "Minimalistyczny, szyfrowany end-to-end dziennik codziennej refleksji z jednym pytaniem dziennie, podpowiedziami na marginesie i dyktowaniem głosowym.",
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "PLN"
+            }
+          },
+          {
+            "@type": "ItemList",
+            "name": "Codzienne pytania do refleksji i dziennika (Daily Reflection Prompts)",
+            "itemListElement": [
+              {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "Overcoming Burnout — Co zabiera Ci dziś najwięcej energii?",
+                "url": "https://yourmoments.vercel.app/prompts/overcoming-burnout"
+              },
+              {
+                "@type": "ListItem",
+                "position": 2,
+                "name": "Evening Gratitude — Za jakie trzy spokojne chwile z dzisiejszego dnia czujesz wdzięczność?",
+                "url": "https://yourmoments.vercel.app/prompts/evening-gratitude"
+              },
+              {
+                "@type": "ListItem",
+                "position": 3,
+                "name": "Quiet Morning Before Screens — Jak wyglądałby Twój idealny poranek bez ekranów?",
+                "url": "https://yourmoments.vercel.app/prompts/quiet-morning-before-screens"
+              },
+              {
+                "@type": "ListItem",
+                "position": 4,
+                "name": "Calming Sentence to Past Self — Jedno uspokajające zdanie do siebie sprzed roku",
+                "url": "https://yourmoments.vercel.app/prompts/calming-sentence-to-past-self"
+              },
+              {
+                "@type": "ListItem",
+                "position": 5,
+                "name": "Sensory Memory of Taste — Jaki drobny moment z dzisiejszego dnia chciałbyś zapamiętać za 5 lat?",
+                "url": "https://yourmoments.vercel.app/prompts/sensory-memory-of-taste"
+              }
+            ]
+          },
+          {
+            "@type": "FAQPage",
+            "mainEntity": [
+              {
+                "@type": "Question",
+                "name": "Czy mogę zacząć pisać w dzienniku Momenty bez zakładania konta?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Tak. Na stronie głównej oraz na stronach poszczególnych pytań (/prompts) możesz od razu napisać swoją dzisiejszą refleksję. Szkic zapisuje się lokalnie w Twojej przeglądarce, a po kliknięciu Zapisz wpis możesz jednym kliknięciem utworzyć szyfrowane konto i zachować go na swojej osi czasu."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Jak działa szyfrowanie End-to-End w aplikacji Momenty?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Wszystkie wpisy są szyfrowane w przeglądarce algorytmem AES-GCM 256 (Web Crypto API) zanim opuszczą Twoje urządzenie. Serwer przechowuje wyłącznie zaszyfrowany szyfrogram."
+                }
+              }
+            ]
+          }
+        ]
+      }
+    </script>
   </head>
-  <body>
-    <div id="root"></div>
+  <body class="bg-[#F7F5F0] text-[#1C1A18] antialiased">
+    <div id="root">
+      <!-- Pre-rendered semantic HTML for search engine indexing and instant First Contentful Paint -->
+      <main class="max-w-5xl mx-auto px-6 py-14 font-serif">
+        <header class="mb-10 pb-6 border-b border-[#E5DFD3] flex items-center justify-between">
+          <a href="/" class="text-xl font-semibold text-[#1C1A18]">Momenty / Moments</a>
+          <nav aria-label="Główna nawigacja" class="flex items-center gap-5 text-xs">
+            <a href="/prompts" class="text-[#8B2635] underline">Biblioteka pytań (/prompts)</a>
+            <a href="/prompts/overcoming-burnout" class="text-[#524D46] underline">Overcoming Burnout</a>
+            <a href="/prompts/evening-gratitude" class="text-[#524D46] underline">Evening Gratitude</a>
+          </nav>
+        </header>
+
+        <section class="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
+          <div class="lg:col-span-5 space-y-4">
+            <p class="text-xs uppercase tracking-wider text-[#8B2635]">Pisz od razu · Zapisz jednym kliknięciem</p>
+            <h1 class="text-4xl sm:text-5xl font-normal tracking-tight text-[#1C1A18] leading-tight">
+              Cicha kartka na Twoje codzienne momenty.
+            </h1>
+            <p class="text-base text-[#524D46] leading-relaxed">
+              Jedno pytanie dziennie, dyktowanie głosem, podpowiedzi na marginesie i szyfrowanie End-to-End AES-256. Zacznij pisać swoją dzisiejszą refleksję bezpośrednio na stronie — bez ekranu logowania na starcie.
+            </p>
+          </div>
+
+          <div class="lg:col-span-7 bg-[#FAF8F5] border border-[#E5DFD3] rounded-xl p-6 space-y-4">
+            <h2 class="text-xl text-[#1C1A18]">
+              Jaki drobny moment z dzisiejszego dnia chciałbyś zapamiętać za pięć lat?
+            </h2>
+            <p class="text-sm italic text-[#6E675F]">
+              Pomyśl o zapachu kawy, krótkim spojrzeniu, świetle za oknem lub jednym zdaniu, które dziś usłyszałeś.
+            </p>
+          </div>
+        </section>
+
+        <section class="mt-14 pt-10 border-t border-[#E5DFD3] space-y-4">
+          <h2 class="text-2xl font-normal text-[#1C1A18]">
+            Biblioteka codziennych pytań do refleksji i uważności (Daily Reflection Prompts)
+          </h2>
+          <p class="text-sm text-[#524D46]">
+            Wybierz temat, aby otworzyć dedykowaną kartkę i odpowiedzieć na pytanie bezpośrednio w przeglądarce:
+          </p>
+          <ul class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+            <li>
+              <a href="/prompts/overcoming-burnout" class="underline text-[#1C1A18]">
+                Overcoming Burnout — Co zabiera Ci dziś najwięcej energii i jaką jedną rzecz możesz odpuścić bez poczucia winy?
+              </a>
+            </li>
+            <li>
+              <a href="/prompts/evening-gratitude" class="underline text-[#1C1A18]">
+                Evening Gratitude — Za jakie trzy ciche, niepozorne chwile z dzisiejszego dnia czujesz dziś wieczorem wdzięczność?
+              </a>
+            </li>
+            <li>
+              <a href="/prompts/quiet-morning-before-screens" class="underline text-[#1C1A18]">
+                Quiet Morning Before Screens — Jak wyglądałby Twój idealny, spokojny poranek bez sięgania po telefon?
+              </a>
+            </li>
+            <li>
+              <a href="/prompts/calming-sentence-to-past-self" class="underline text-[#1C1A18]">
+                Calming Sentence to Past Self — Gdybyś mógł wysłać jedno uspokajające zdanie do siebie sprzed roku, jak by brzmiało?
+              </a>
+            </li>
+            <li>
+              <a href="/prompts/sensory-memory-of-taste" class="underline text-[#1C1A18]">
+                Sensory Memory — Jaki drobny moment z dzisiejszego dnia chciałbyś zapamiętać za 5 lat?
+              </a>
+            </li>
+            <li>
+              <a href="/prompts" class="underline font-medium text-[#8B2635]">
+                Zobacz wszystkie 47 pytań do dziennika (/prompts) →
+              </a>
+            </li>
+          </ul>
+        </section>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
+
 
 

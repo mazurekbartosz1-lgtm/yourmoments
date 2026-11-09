@@ -1,6 +1,6 @@
 {
   "packageId": "app.momenty.dziennik",
-  "host": "ais-pre-eceuqixuqw4dcsthqd56jo-41510066825.europe-west2.run.app",
+  "host": "yourmoments.vercel.app",
   "name": "Momenty — Cichy Dziennik",
   "launcherName": "Momenty",
   "display": "standalone",
@@ -13,8 +13,8 @@
   "backgroundColor": "#F7F5F0",
   "enableNotifications": true,
   "startUrl": "/",
-  "iconUrl": "https://ais-pre-eceuqixuqw4dcsthqd56jo-41510066825.europe-west2.run.app/pwa-512x512.png",
-  "maskableIconUrl": "https://ais-pre-eceuqixuqw4dcsthqd56jo-41510066825.europe-west2.run.app/pwa-maskable-512x512.png",
+  "iconUrl": "https://yourmoments.vercel.app/pwa-512x512.png",
+  "maskableIconUrl": "https://yourmoments.vercel.app/pwa-maskable-512x512.png",
   "splashScreenFadeOutDuration": 300,
   "signingKey": {
     "path": "./android.keystore",
@@ -27,17 +27,17 @@
       "name": "Dzisiejsze pytanie",
       "shortName": "Pytanie dnia",
       "url": "/?mode=daily",
-      "chosenIconUrl": "https://ais-pre-eceuqixuqw4dcsthqd56jo-41510066825.europe-west2.run.app/pwa-192x192.png"
+      "chosenIconUrl": "https://yourmoments.vercel.app/pwa-192x192.png"
     },
     {
       "name": "Zapisz wolną myśl",
       "shortName": "Wolna myśl",
       "url": "/?mode=free",
-      "chosenIconUrl": "https://ais-pre-eceuqixuqw4dcsthqd56jo-41510066825.europe-west2.run.app/pwa-192x192.png"
+      "chosenIconUrl": "https://yourmoments.vercel.app/pwa-192x192.png"
     }
   ],
   "generatorApp": "bubblewrap-cli",
-  "webManifestUrl": "https://ais-pre-eceuqixuqw4dcsthqd56jo-41510066825.europe-west2.run.app/manifest.webmanifest",
+  "webManifestUrl": "https://yourmoments.vercel.app/manifest.webmanifest",
   "fallbackType": "customtabs",
   "features": {},
   "alphaDependencies": {

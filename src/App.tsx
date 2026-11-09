@@ -25,6 +25,7 @@ import {
   handleFirestoreError,
   OperationType,
   testFirestoreConnection,
+  formatFirebaseAuthError,
 } from './services/firebase';
 import {
   encryptText,
@@ -62,6 +63,7 @@ import { SavedEntry } from './components/ChronicleArchiveModal';
 import { AuthModal } from './components/AuthModal';
 import { AdminPanelModal, isAuthorizedAdmin } from './components/AdminPanelModal';
 import { LandingPage } from './components/LandingPage';
+import { PromptLibraryView } from './components/PromptLibraryView';
 import { SparkleModal, SparkleAppreciationCard } from './components/SparkleModal';
 import { OneTimeShareModal } from './components/OneTimeShareModal';
 import { SharedEntryView } from './components/SharedEntryView';
@@ -213,23 +215,48 @@ export default function App() {
     localStorage.setItem('kronika_lang', newLang);
   };
 
+  const [currentPathname, setCurrentPathname] = useState<string>(() => {
+    if (typeof window === 'undefined') return '/';
+    return window.location.pathname || '/';
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const onPopState = () => {
+      setCurrentPathname(window.location.pathname || '/');
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  const navigateTo = useCallback((path: string) => {
+    if (typeof window !== 'undefined') {
+      window.history.pushState({}, '', path);
+      setCurrentPathname(path);
+    }
+  }, []);
+
   const handleGoogleLogin = async () => {
     setIsAuthLoading(true);
     setAuthError(null);
     try {
       await signInWithPopup(auth, googleProvider);
+      if (typeof window !== 'undefined' && window.location.pathname.startsWith('/prompts')) {
+        window.history.pushState({}, '', '/');
+        setCurrentPathname('/');
+      }
     } catch (err: unknown) {
       console.error('Google Sign-In error:', err);
+      const formatted = formatFirebaseAuthError(err, lang);
       setAuthError(
-        err instanceof Error
-          ? err.message
-          : lang === 'en'
-          ? 'Could not sign in with Google. Please try again.'
-          : lang === 'es'
-          ? 'No se pudo iniciar sesión con Google. Inténtalo de nuevo.'
-          : lang === 'fr'
-          ? 'Impossible de se connecter avec Google. Veuillez réessayer.'
-          : 'Nie udało się zalogować przez Google. Spróbuj ponownie.'
+        formatted ||
+          (lang === 'en'
+            ? 'Could not sign in with Google. Please try again.'
+            : lang === 'es'
+            ? 'No se pudo iniciar sesión con Google. Inténtalo de nuevo.'
+            : lang === 'fr'
+            ? 'Impossible de se connecter avec Google. Veuillez réessayer.'
+            : 'Nie udało się zalogować przez Google. Spróbuj ponownie.')
       );
     } finally {
       setIsAuthLoading(false);
@@ -866,20 +893,70 @@ export default function App() {
       } else {
         setDecryptionError(false);
         setRawCiphertext('');
-        const localDraft = localStorage.getItem(`kronika_draft_${todayKey}`);
+        const localDraft =
+          localStorage.getItem(`kronika_draft_${todayKey}`) ||
+          localStorage.getItem('kronika_plg_draft');
         if (localDraft) {
           try {
             const parsed = JSON.parse(localDraft);
-            setContent(parsed.content || '');
-            setIsSealed(parsed.isSealed || false);
-            if (typeof parsed.writingTimeSeconds === 'number') {
-              setWritingTimeSeconds(parsed.writingTimeSeconds);
+            const draftContent = typeof parsed.content === 'string' ? parsed.content : '';
+            const draftPromptId =
+              typeof parsed.promptId === 'string' && parsed.promptId
+                ? parsed.promptId
+                : refreshedPool[0]?.id || DAILY_PROMPTS[0].id;
+            const draftTime =
+              typeof parsed.writingTimeSeconds === 'number' ? parsed.writingTimeSeconds : 0;
+
+            setContent(draftContent);
+            setIsSealed(Boolean(parsed.isSealed));
+            setWritingTimeSeconds(draftTime);
+            if (draftPromptId) {
+              setAnsweredPromptId(draftPromptId);
+              setIsFreeThoughtMode(draftPromptId === FREE_THOUGHT_PROMPT_ID);
+              localStorage.setItem(`kronika_answered_prompt_${todayKey}`, draftPromptId);
+              const matchedPrompt = DAILY_PROMPTS.find(p => p.id === draftPromptId);
+              if (matchedPrompt) {
+                setPromptIndex(0);
+                setPromptHistory(prev => {
+                  const updated = [
+                    matchedPrompt,
+                    ...prev.filter(p => p.id !== matchedPrompt.id),
+                  ].slice(0, 3);
+                  localStorage.setItem(`kronika_prompt_history_${todayKey}`, JSON.stringify(updated));
+                  return updated;
+                });
+              }
             }
-            if (parsed.promptId) {
-              setAnsweredPromptId(parsed.promptId);
-              setIsFreeThoughtMode(parsed.promptId === FREE_THOUGHT_PROMPT_ID);
+            lastSavedContentRef.current = draftContent;
+
+            // Automatically encrypt & save the PLG guest reflection to the user's cloud timeline!
+            if (draftContent.trim().length > 0 && activeKey) {
+              try {
+                const encrypted = await encryptText(draftContent, activeKey);
+                const wordCount = draftContent.trim().split(/\s+/).length;
+                const entryRef = doc(db, 'users', currentUser.uid, 'entries', todayKey);
+                await setDoc(entryRef, {
+                  id: todayKey,
+                  userId: currentUser.uid,
+                  date: todayKey,
+                  promptId: draftPromptId,
+                  encryptedContent: encrypted.encryptedContent,
+                  iv: encrypted.iv,
+                  salt: encrypted.salt,
+                  characterCount: draftContent.length,
+                  wordCount,
+                  writingTimeSeconds: draftTime,
+                  deviceName: localDevName.slice(0, 120),
+                  isSealed: Boolean(parsed.isSealed),
+                  createdAt: serverTimestamp(),
+                  updatedAt: serverTimestamp(),
+                });
+                localStorage.removeItem('kronika_plg_draft');
+                setSaveStatus('saved');
+              } catch (plgSyncErr) {
+                console.warn('Could not auto-sync PLG draft on first load:', plgSyncErr);
+              }
             }
-            lastSavedContentRef.current = parsed.content || '';
           } catch {
             setContent(localDraft);
             lastSavedContentRef.current = localDraft;
@@ -1727,12 +1804,56 @@ export default function App() {
     );
   }
 
+  const isPromptsRoute =
+    currentPathname === '/prompts' || currentPathname.startsWith('/prompts/');
+  const activePromptSlug = currentPathname.startsWith('/prompts/')
+    ? decodeURIComponent(currentPathname.slice('/prompts/'.length).replace(/\/+$/, ''))
+    : null;
+
+  if (isPromptsRoute) {
+    return (
+      <PromptLibraryView
+        slug={activePromptSlug}
+        lang={lang}
+        onLanguageChange={handleChangeLang}
+        onNavigate={navigateTo}
+        onGoogleLogin={handleGoogleLogin}
+        onOpenInEditorWithPrompt={(selectedPrompt, draftText) => {
+          setIsFreeThoughtMode(false);
+          setAnsweredPromptId(selectedPrompt.id);
+          localStorage.setItem(`kronika_answered_prompt_${todayKey}`, selectedPrompt.id);
+          setPromptIndex(0);
+          setPromptHistory(prev => {
+            const updated = [
+              selectedPrompt,
+              ...prev.filter(p => p.id !== selectedPrompt.id),
+            ].slice(0, 3);
+            localStorage.setItem(`kronika_prompt_history_${todayKey}`, JSON.stringify(updated));
+            return updated;
+          });
+          if (draftText.trim().length > 0) {
+            setContent(draftText);
+            saveEntry(draftText, false, writingTimeSeconds, selectedPrompt.id);
+          }
+          setShowLandingPreview(false);
+          navigateTo('/');
+        }}
+        isSignedIn={Boolean(currentUser)}
+        userName={currentUser?.displayName?.split(' ')[0] || undefined}
+        userPhotoURL={currentUser?.photoURL || undefined}
+        isAuthLoading={isAuthLoading}
+        authError={authError}
+      />
+    );
+  }
+
   if (!currentUser || showLandingPreview) {
     return (
       <LandingPage
         lang={lang}
         onLanguageChange={handleChangeLang}
         onGoogleLogin={handleGoogleLogin}
+        onNavigate={navigateTo}
         onReturnToEditor={currentUser ? () => setShowLandingPreview(false) : undefined}
         userName={currentUser?.displayName?.split(' ')[0] || undefined}
         userPhotoURL={currentUser?.photoURL || undefined}

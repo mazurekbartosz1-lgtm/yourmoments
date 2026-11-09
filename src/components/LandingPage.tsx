@@ -19,7 +19,9 @@ import {
   X,
   User,
   Mic,
+  MicOff,
   Unlock,
+  BookOpen,
 } from 'lucide-react';
 import { CompanionDesk, COMPANIONS, CompanionId } from './CompanionDesk';
 import {
@@ -29,6 +31,11 @@ import {
   Language,
   getPromptText,
   getHintText,
+  getPromptSlug,
+  getPromptSeoDetails,
+  formatDateKey,
+  FREE_THOUGHT_PROMPT,
+  FREE_THOUGHT_PROMPT_ID,
 } from '../data/prompts';
 import { encryptText, EncryptedPayload } from '../services/crypto';
 import { usePWAInstall } from '../services/pwa';
@@ -37,6 +44,7 @@ interface LandingPageProps {
   lang: Language;
   onLanguageChange: (lang: Language) => void;
   onGoogleLogin: () => Promise<void>;
+  onNavigate?: (path: string) => void;
   onReturnToEditor?: () => void;
   userName?: string;
   userPhotoURL?: string;
@@ -117,6 +125,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   lang,
   onLanguageChange,
   onGoogleLogin,
+  onNavigate,
   onReturnToEditor,
   userName,
   userPhotoURL,
@@ -157,7 +166,183 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     }
   };
 
-  // Hero live typewriter demo state (calm, unhurried pace)
+  const handleSpaLink = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
+    if (!onNavigate) return;
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+    e.preventDefault();
+    onNavigate(path);
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  // ===========================================================================
+  // PLG "WRITE FIRST, SIGN UP TO SAVE" INTERACTIVE HERO STATE
+  // ===========================================================================
+  const todayKey = formatDateKey(new Date());
+  const heroPromptsPool = [
+    DAILY_PROMPTS[0], // small moment to remember in 5 years
+    DAILY_PROMPTS.find(p => p.slug === 'overcoming-burnout') || DAILY_PROMPTS[11],
+    DAILY_PROMPTS.find(p => p.slug === 'evening-gratitude') || DAILY_PROMPTS[1],
+  ];
+  const [plgPromptIdx, setPlgPromptIdx] = useState<number>(0);
+  const [plgFreeThought, setPlgFreeThought] = useState<boolean>(false);
+  const activeHeroPrompt = plgFreeThought
+    ? FREE_THOUGHT_PROMPT
+    : heroPromptsPool[plgPromptIdx] || DAILY_PROMPTS[0];
+  const activeHeroSeo = getPromptSeoDetails(activeHeroPrompt, lang);
+
+  const [plgDraft, setPlgDraft] = useState<string>(() => {
+    if (typeof window === 'undefined') return '';
+    try {
+      const todayDraftRaw = localStorage.getItem(`kronika_draft_${formatDateKey(new Date())}`);
+      if (todayDraftRaw) {
+        const parsed = JSON.parse(todayDraftRaw);
+        if (parsed && typeof parsed.content === 'string' && parsed.content.trim().length > 0) {
+          return parsed.content;
+        }
+      }
+      const plgRaw = localStorage.getItem('kronika_plg_draft');
+      if (plgRaw) {
+        const parsed = JSON.parse(plgRaw);
+        if (parsed && typeof parsed.content === 'string') {
+          return parsed.content;
+        }
+      }
+    } catch {
+      // ignore
+    }
+    return '';
+  });
+
+  const [plgWritingSeconds, setPlgWritingSeconds] = useState<number>(0);
+  const [isPlgUserTyping, setIsPlgUserTyping] = useState<boolean>(false);
+  const [isPlgListening, setIsPlgListening] = useState<boolean>(false);
+  const [showPlgConversionModal, setShowPlgConversionModal] = useState<boolean>(false);
+  const heroTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const plgTypingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const plgSpeechRef = useRef<any>(null);
+
+  const persistPlgDraft = (textVal: string, promptIdVal: string, secsVal: number) => {
+    try {
+      const payload = {
+        content: textVal,
+        isSealed: false,
+        promptId: promptIdVal,
+        writingTimeSeconds: secsVal,
+        updatedAt: new Date().toISOString(),
+      };
+      localStorage.setItem('kronika_plg_draft', JSON.stringify(payload));
+      if (textVal.trim().length > 0) {
+        localStorage.setItem(`kronika_draft_${todayKey}`, JSON.stringify(payload));
+        localStorage.setItem(`kronika_answered_prompt_${todayKey}`, promptIdVal);
+      }
+    } catch {
+      // ignore storage errors
+    }
+  };
+
+  const handlePlgDraftChange = (newText: string) => {
+    setPlgDraft(newText);
+    setIsPlgUserTyping(true);
+    if (plgTypingTimerRef.current) clearTimeout(plgTypingTimerRef.current);
+    plgTypingTimerRef.current = setTimeout(() => {
+      setIsPlgUserTyping(false);
+    }, 1200);
+    persistPlgDraft(newText, activeHeroPrompt.id, plgWritingSeconds);
+  };
+
+  useEffect(() => {
+    if (!isPlgUserTyping) return;
+    const timer = setInterval(() => {
+      setPlgWritingSeconds(prev => prev + 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [isPlgUserTyping]);
+
+  const applyPlgFormatting = (wrapper: '**' | '*') => {
+    const el = heroTextareaRef.current;
+    if (!el) return;
+    const start = el.selectionStart ?? plgDraft.length;
+    const end = el.selectionEnd ?? plgDraft.length;
+    const selected = plgDraft.slice(start, end);
+    const replacement = selected
+      ? `${wrapper}${selected}${wrapper}`
+      : `${wrapper}${tr('tekst', 'text', 'texto', 'texte')}${wrapper}`;
+    const updated = plgDraft.slice(0, start) + replacement + plgDraft.slice(end);
+    handlePlgDraftChange(updated);
+    setTimeout(() => {
+      el.focus();
+      const cursor = start + replacement.length;
+      el.setSelectionRange(cursor, cursor);
+    }, 15);
+  };
+
+  const insertPlgMarginHint = (questionText: string) => {
+    const cleanQ = questionText.replace(/[„”"«»→]/g, '').trim();
+    const formatted = `***${cleanQ}***`;
+    const prefix = plgDraft.trim().length > 0 ? `${plgDraft.replace(/\s+$/, '')}\n\n` : '';
+    const updated = `${prefix}${formatted}\n`;
+    handlePlgDraftChange(updated);
+    setTimeout(() => {
+      if (heroTextareaRef.current) {
+        heroTextareaRef.current.focus();
+        heroTextareaRef.current.setSelectionRange(updated.length, updated.length);
+      }
+    }, 20);
+  };
+
+  const togglePlgDictation = () => {
+    if (typeof window === 'undefined') return;
+    const SpeechRec =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRec) return;
+
+    if (isPlgListening && plgSpeechRef.current) {
+      try {
+        plgSpeechRef.current.stop();
+      } catch {
+        // ignore
+      }
+      setIsPlgListening(false);
+      return;
+    }
+
+    try {
+      const rec = new SpeechRec();
+      rec.lang =
+        lang === 'en' ? 'en-US' : lang === 'es' ? 'es-ES' : lang === 'fr' ? 'fr-FR' : 'pl-PL';
+      rec.interimResults = false;
+      rec.continuous = false;
+      rec.onresult = (event: any) => {
+        const transcript = event?.results?.[0]?.[0]?.transcript;
+        if (transcript && typeof transcript === 'string') {
+          const sep = plgDraft && !/\s$/.test(plgDraft) ? ' ' : '';
+          handlePlgDraftChange(`${plgDraft}${sep}${transcript.trim()}`);
+        }
+      };
+      rec.onerror = () => setIsPlgListening(false);
+      rec.onend = () => setIsPlgListening(false);
+      plgSpeechRef.current = rec;
+      setIsPlgListening(true);
+      rec.start();
+    } catch {
+      setIsPlgListening(false);
+    }
+  };
+
+  const handleSaveEntryTrigger = () => {
+    persistPlgDraft(plgDraft, activeHeroPrompt.id, plgWritingSeconds);
+    if (onReturnToEditor) {
+      onReturnToEditor();
+      return;
+    }
+    setShowPlgConversionModal(true);
+  };
+
+  const plgWordCount = plgDraft.trim() ? plgDraft.trim().split(/\s+/).length : 0;
+
+  // Hero live typewriter demo state (used in Step 01/02 showcase below fold)
   const heroSamplePl =
     'Dzisiaj po południu zauważyłem, jak światło wpada przez kuchenne okno. Zaparzyłem herbatę i przez dziesięć minut po prostu słuchałem deszczu.';
   const heroSampleEn =
@@ -575,6 +760,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             >
               {tr('Bezpieczeństwo', 'Encryption', 'Seguridad', 'Chiffrement')}
             </button>
+            <a
+              href="/prompts"
+              onClick={e => handleSpaLink(e, '/prompts')}
+              className="text-[#8B2635] hover:text-[#1C1A18] hover:underline underline-offset-4 transition-colors whitespace-nowrap shrink-0 cursor-pointer font-medium"
+            >
+              {tr('Biblioteka pytań (47)', 'Prompts Library (47)', 'Preguntas (47)', 'Questions (47)')}
+            </a>
           </nav>
 
           {/* Compact Right Header Controls: Mobile + Language Dropdown + Account (Padlock or Name & Avatar) */}
@@ -1020,12 +1212,121 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           showAppLoginScreen ? 'hidden' : 'block'
         } flex-1`}
       >
-        {/* 1. HERO SECTION */}
-        <section className="max-w-6xl mx-auto px-6 pt-12 pb-20 md:pt-20 md:pb-28">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-            {/* Left Column: Minimalist Headline & Primary CTA */}
-            <div className="lg:col-span-5 space-y-6">
+        {/* PLG Frictionless Conversion Modal ("Your moment is ready. Create an encrypted account in 1 click to save it to your timeline.") */}
+        {showPlgConversionModal && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 backdrop-blur-[2px]"
+            onClick={() => setShowPlgConversionModal(false)}
+          >
+            <div
+              className="w-full max-w-md bg-[#FAF8F5] border border-[#E2DDD3] rounded-2xl shadow-xl p-6 sm:p-7 text-[#1C1A18] space-y-5 animate-in fade-in zoom-in-95 duration-150"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="inline-flex items-center gap-2 text-xs font-mono-meta text-[#2E6F40]">
+                  <ShieldCheck className="w-4 h-4 shrink-0" />
+                  <span>AES-GCM 256 · END-TO-END ENCRYPTED</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowPlgConversionModal(false)}
+                  className="p-1 rounded text-[#7A756D] hover:text-[#1C1A18] hover:bg-[#EFECE4] transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-2.5">
+                <h3 className="text-2xl font-serif-literary font-medium text-[#1C1A18] leading-snug">
+                  {tr(
+                    'Twój moment jest gotowy. Stwórz szyfrowane konto jednym kliknięciem, aby zapisać go na swojej osi czasu.',
+                    'Your moment is ready. Create an encrypted account in 1 click to save it to your timeline.',
+                    'Tu momento está listo. Crea una cuenta cifrada en 1 clic para guardarlo en tu línea de tiempo.',
+                    'Votre moment est prêt. Créez un compte chiffré en 1 clic pour l’enregistrer sur votre fil.'
+                  )}
+                </h3>
+                <p className="text-sm font-serif-literary text-[#524D46] leading-relaxed">
+                  {tr(
+                    'Twój tekst jest już bezpiecznie zapisany w pamięci przeglądarki. Jedno kliknięcie zaszyfruje go kluczem AES-256 i doda bezpośrednio do Twojego dzisiejszego dnia.',
+                    'Your reflection is already safely stored in your browser. One click encrypts it with your private AES-256 key and saves it directly to today’s entry.',
+                    'Tu reflexión ya está guardada en tu navegador. Un clic la cifrará con tu clave privada AES-256 y la guardará en tu diario de hoy.',
+                    'Votre réflexion est déjà enregistrée dans votre navigateur. Un clic la chiffrera avec votre clé privée AES-256 et l’ajoutera à votre journée.'
+                  )}
+                </p>
+              </div>
+
+              {plgDraft.trim().length > 0 && (
+                <div className="p-3.5 rounded-xl bg-[#F2EFE8] border border-[#DDD6C8] space-y-1 text-left">
+                  <div className="text-[10px] font-mono-meta text-[#7A756D] uppercase tracking-wider">
+                    {tr('Twój dzisiejszy szkic', 'Your draft ready to save', 'Tu borrador listo', 'Votre brouillon prêt')} · {plgWordCount}{' '}
+                    {tr('słów', 'words', 'palabras', 'mots')}
+                  </div>
+                  <p className="text-xs font-serif-literary italic text-[#33302B] line-clamp-3">
+                    „{plgDraft.trim()}”
+                  </p>
+                </div>
+              )}
+
+              {authError && (
+                <div className="p-3 rounded-lg bg-[#FDF2F2] border border-[#E8C5C5] text-xs font-mono-meta text-[#8B2635] flex items-center gap-2 text-left">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{authError}</span>
+                </div>
+              )}
+
+              <div className="space-y-2.5 pt-1">
+                <button
+                  type="button"
+                  onClick={onGoogleLogin}
+                  disabled={isAuthLoading}
+                  className="w-full py-3.5 px-5 rounded-xl bg-[#1C1A18] hover:bg-[#33302B] text-[#FAF8F5] text-xs sm:text-sm font-mono-meta font-medium flex items-center justify-center gap-2.5 transition-all cursor-pointer disabled:opacity-60"
+                >
+                  <Lock className="w-4 h-4 text-[#EBC5CF]" />
+                  <span>
+                    {isAuthLoading
+                      ? tr('Szyfrowanie i łączenie...', 'Encrypting & connecting...', 'Conectando...', 'Connexion...')
+                      : tr(
+                          'Stwórz szyfrowane konto w 1 kliknięcie (Google)',
+                          'Create encrypted account in 1 click (Google)',
+                          'Crear cuenta cifrada en 1 clic (Google)',
+                          'Créer un compte chiffré en 1 clic (Google)'
+                        )}
+                  </span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowPlgConversionModal(false)}
+                  className="w-full py-2 text-xs font-mono-meta text-[#7A756D] hover:text-[#1C1A18] transition-colors cursor-pointer"
+                >
+                  {tr(
+                    'Wróć do pisania (szkic czeka w przeglądarce)',
+                    'Keep writing first (your draft stays saved locally)',
+                    'Seguir escribiendo primero',
+                    'Continuer à écrire d’abord'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 1. HERO SECTION — Interactive "Write First, Sign Up to Save" PLG Experience */}
+        <section className="max-w-6xl mx-auto px-6 pt-10 pb-18 md:pt-16 md:pb-24">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-start">
+            {/* Left Column: Minimalist Headline & PLG Value Proposition */}
+            <div className="lg:col-span-5 space-y-6 lg:pt-4">
               <div className="space-y-4">
+                <div className="text-xs font-mono-meta text-[#8B2635] tracking-wide">
+                  {tr(
+                    'PISZ OD RAZU · ZAPISZ JEDNYM KLIKNIĘCIEM',
+                    'WRITE FIRST · SIGN UP TO SAVE',
+                    'ESCRIBE PRIMERO · GUARDA EN 1 CLIC',
+                    'ÉCRIVEZ D’ABORD · SAUVEGARDEZ EN 1 CLIC'
+                  )}
+                </div>
+
                 <h1
                   className="text-4xl sm:text-5xl font-serif-literary font-normal tracking-tight text-[#1C1A18] leading-[1.13]"
                   style={{ textWrap: 'balance' }}
@@ -1040,10 +1341,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
                 <p className="text-base sm:text-lg text-[#524D46] font-serif-literary leading-relaxed">
                   {tr(
-                    'Jedno Pytanie dziennie, dyktowanie głosem, podpowiedzi na marginesie i liniowe wykresy Twojego rytmu. Działa na komputerze i telefonie — zaszyfrowane zanim opuści Twoje urządzenie.',
-                    'One Question a day, voice dictation, gentle margin hints, and line-art rhythm charts. Works on desktop and mobile — encrypted before it leaves your device.',
-                    'Una pregunta al día, dictado por voz, pistas en el margen y gráficos lineales de tu ritmo. En ordenador y móvil — cifrado antes de salir de tu dispositivo.',
-                    'Une question par jour, dictée vocale, pistes en marge et graphiques linéaires de votre rythme. Sur ordinateur et mobile — chiffré avant de quitter votre appareil.'
+                    'Nie musisz zakładać konta, żeby zacząć. Odpowiedz na dzisiejsze pytanie bezpośrednio na kartce obok — Twój szkic zapisuje się lokalnie w trakcie pisania. Gdy będziesz gotowy, zachowaj go na swojej szyfrowanej osi czasu.',
+                    'Never hit a login wall before your first thought. Answer today’s reflection prompt right on the page — your words save locally as you type. Click “Save Entry” whenever you’re ready to keep it.',
+                    'Empieza a escribir sin muros de registro. Responde a la pregunta de hoy directamente en la página: tu texto se guarda localmente mientras escribes.',
+                    'Commencez sans mur de connexion. Répondez à la question du jour directement sur la page : vos mots sont sauvegardés localement pendant que vous écrivez.'
                   )}
                 </p>
               </div>
@@ -1059,18 +1360,33 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <div className="flex flex-wrap items-center gap-3">
                   <button
                     type="button"
-                    onClick={onGoogleLogin}
+                    onClick={() => {
+                      if (plgDraft.trim().length > 0) {
+                        handleSaveEntryTrigger();
+                      } else if (heroTextareaRef.current) {
+                        heroTextareaRef.current.focus();
+                      } else {
+                        onGoogleLogin();
+                      }
+                    }}
                     disabled={isAuthLoading}
                     className="px-6 py-3.5 text-sm font-mono-meta font-medium text-[#FAF8F5] bg-[#1C1A18] hover:bg-[#33302B] rounded-lg transition-all flex items-center gap-2.5 cursor-pointer whitespace-nowrap shrink-0 disabled:opacity-60"
                   >
                     <span>
                       {isAuthLoading
                         ? tr('Łączenie...', 'Connecting...', 'Conectando...', 'Connexion...')
+                        : plgDraft.trim().length > 0
+                        ? tr(
+                            'Zapisz wpis na osi czasu',
+                            'Save Entry to Timeline',
+                            'Guardar entrada',
+                            'Enregistrer l’entrée'
+                          )
                         : tr(
-                            'Stwórz konto / Zaloguj',
-                            'Create account / Sign in',
-                            'Crear cuenta / Entrar',
-                            'Créer un compte / Connexion'
+                            'Zacznij pisać teraz',
+                            'Start writing now',
+                            'Empieza a escribir',
+                            'Commencer à écrire'
                           )}
                     </span>
                     <ArrowRight className="w-4 h-4" />
@@ -1078,24 +1394,50 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
                   <button
                     type="button"
-                    onClick={() => scrollToSection('flow-section')}
+                    onClick={onReturnToEditor || onGoogleLogin}
+                    disabled={isAuthLoading}
                     className="px-4 py-3.5 text-sm font-mono-meta text-[#524D46] hover:text-[#1C1A18] border border-[#DDD6C8] hover:border-[#B8B0A0] bg-[#FAF8F5] rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
                   >
-                    {tr(
-                      'Zobacz jak działa',
-                      'See how it works',
-                      'Ver cómo funciona',
-                      'Voir comment ça marche'
-                    )}
+                    {onReturnToEditor
+                      ? tr('Otwórz dziennik', 'Open journal', 'Abrir diario', 'Ouvrir le journal')
+                      : tr('Zaloguj się', 'Sign in', 'Iniciar sesión', 'Se connecter')}
                   </button>
+                </div>
+
+                {/* Quick links to programmatic long-tail prompt pages */}
+                <div className="pt-3 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs font-mono-meta text-[#7A756D]">
+                  <span>{tr('Popularne tematy:', 'Popular prompts:', 'Temas:', 'Sujets :')}</span>
+                  <a
+                    href="/prompts/overcoming-burnout"
+                    onClick={e => handleSpaLink(e, '/prompts/overcoming-burnout')}
+                    className="text-[#524D46] hover:text-[#8B2635] underline underline-offset-4"
+                  >
+                    {tr('Wypalenie i zmęczenie', 'Overcoming burnout', 'Superar el agotamiento', 'Surmonter l’épuisement')}
+                  </a>
+                  <span aria-hidden="true">·</span>
+                  <a
+                    href="/prompts/evening-gratitude"
+                    onClick={e => handleSpaLink(e, '/prompts/evening-gratitude')}
+                    className="text-[#524D46] hover:text-[#8B2635] underline underline-offset-4"
+                  >
+                    {tr('Wieczorna wdzięczność', 'Evening gratitude', 'Gratitud nocturna', 'Gratitude du soir')}
+                  </a>
+                  <span aria-hidden="true">·</span>
+                  <a
+                    href="/prompts"
+                    onClick={e => handleSpaLink(e, '/prompts')}
+                    className="text-[#8B2635] hover:text-[#1C1A18] underline underline-offset-4 font-medium"
+                  >
+                    {tr('Wszystkie (47) →', 'All prompts (47) →', 'Todas (47) →', 'Toutes (47) →')}
+                  </a>
                 </div>
               </div>
             </div>
 
-            {/* Right Column: Live Paper Sanctuary Preview */}
-            <div className="lg:col-span-7 flex flex-col justify-between bg-[#FAF8F5] border border-[#E5DFD3] rounded-xl p-6 sm:p-8 relative overflow-hidden">
-              {/* Top simulated writing header: ONLY cloud+sun logo next to Cześć Bartek */}
-              <div className="flex items-center justify-between pb-4 mb-5 border-b border-[#ECE7DC] text-xs font-mono-meta text-[#7A756D]">
+            {/* Right Column: Live Interactive "Write First, Sign Up to Save" Paper Sanctuary */}
+            <div className="lg:col-span-7 flex flex-col justify-between bg-[#FAF8F5] border border-[#E5DFD3] rounded-xl p-5 sm:p-8 relative overflow-hidden shadow-[0_10px_34px_-16px_rgba(28,26,24,0.08)]">
+              {/* Top Interactive Writing Header: Logo + Prompt Switcher (1/3) + Free Thought */}
+              <div className="flex flex-wrap items-center justify-between gap-2 pb-4 mb-4 border-b border-[#ECE7DC] text-xs font-mono-meta text-[#7A756D]">
                 <div className="flex items-center gap-1.5 text-[#1C1A18] font-serif-literary text-sm">
                   <svg
                     viewBox="0 0 36 26"
@@ -1119,117 +1461,209 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       strokeLinejoin="round"
                     />
                   </svg>
-                  <span>{tr('Cześć', 'Hello', 'Hola', 'Bonjour')}</span>
-                  <span className="inline-flex items-center gap-1.5 font-medium text-[#1C1A18]">
-                    <span>Bartek</span>
-                    <span className="w-4 h-4 rounded-full bg-[#EAE5DA] text-[#524D46] flex items-center justify-center text-[10px] font-mono-meta">
-                      B
-                    </span>
+                  <span>
+                    {tr('Dzisiejsza kartka', 'Today’s page', 'Página de hoy', 'Page d’aujourd’hui')}
+                  </span>
+                  <span className="text-[#9E978C] font-mono-meta text-[11px]">
+                    · {todayKey}
                   </span>
                 </div>
-                <div className="flex items-center gap-2 tabular-nums">
-                  <span>
-                    {tr('WTOREK, 20 PAŹ', 'TUESDAY, OCT 20', 'MARTES, 20 OCT', 'MARDI 20 OCT')}
-                  </span>
-                  <span aria-hidden="true">·</span>
-                  <span>1/3</span>
+
+                <div className="flex items-center gap-1.5 tabular-nums">
+                  {!plgFreeThought && (
+                    <div className="inline-flex items-center gap-1 bg-[#F2EFE8] border border-[#E2DDD3] rounded-md px-1.5 py-0.5">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPlgPromptIdx(
+                            prev => (prev - 1 + heroPromptsPool.length) % heroPromptsPool.length
+                          )
+                        }
+                        className="p-0.5 hover:text-[#1C1A18] cursor-pointer"
+                        title={tr('Poprzednie pytanie', 'Previous prompt', 'Pregunta anterior', 'Question précédente')}
+                      >
+                        <ChevronLeft className="w-3 h-3" />
+                      </button>
+                      <span className="text-[11px] text-[#1C1A18] font-medium px-1">
+                        {plgPromptIdx + 1}/{heroPromptsPool.length}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPlgPromptIdx(prev => (prev + 1) % heroPromptsPool.length)
+                        }
+                        className="p-0.5 hover:text-[#1C1A18] cursor-pointer"
+                        title={tr('Kolejne pytanie', 'Next prompt', 'Siguiente pregunta', 'Question suivante')}
+                      >
+                        <ChevronRight className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => setPlgFreeThought(prev => !prev)}
+                    className={`px-2 py-1 rounded-md border text-[11px] font-mono-meta inline-flex items-center gap-1 transition-colors cursor-pointer ${
+                      plgFreeThought
+                        ? 'bg-[#1C1A18] border-[#1C1A18] text-[#FAF8F5]'
+                        : 'bg-[#FAF8F5] border-[#DDD6C8] hover:bg-[#EFECE4] text-[#524D46]'
+                    }`}
+                  >
+                    <Feather className="w-3 h-3 text-[#8B2635]" />
+                    <span>{tr('Wolna myśl', 'Free thought', 'Pensamiento libre', 'Pensée libre')}</span>
+                  </button>
                 </div>
               </div>
 
-              {/* Daily Question & Live Typed Text + Margin Hint */}
+              {/* Daily Question + Interactive Toolbar + Live Textarea */}
               <div className="space-y-4 my-auto">
-                <h2 className="text-xl sm:text-2xl font-serif-literary text-[#1C1A18] leading-snug">
-                  {tr(
-                    'Jaki drobny moment z dzisiejszego dnia chciałbyś zapamiętać za pięć lat?',
-                    'What small moment from today would you like to remember in five years?',
-                    '¿Qué pequeño momento de hoy te gustaría recordar dentro de cinco años?',
-                    'Quel petit moment d’aujourd’hui aimeriez-vous retrouver dans cinq ans ?'
-                  )}
-                </h2>
+                <div className="flex items-start justify-between gap-3">
+                  <h2 className="text-xl sm:text-2xl font-serif-literary text-[#1C1A18] leading-snug">
+                    {getPromptText(activeHeroPrompt, lang)}
+                  </h2>
+                </div>
 
-                {/* Simulated Sticky Editor Toolbar: Voice Dictation + Bold/Italic + Spellcheck */}
+                {/* Live Interactive Writing Toolbar: Voice Dictation + Bold/Italic + Sample */}
                 <div className="flex flex-wrap items-center justify-between gap-2 py-2 px-3 rounded-lg bg-[#F7F5F0] border border-[#E5DFD3] text-[11px] font-mono-meta text-[#524D46]">
                   <div className="flex items-center gap-1.5">
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#FAF8F5] border border-[#DDD6C8] text-[#1C1A18] font-medium">
-                      <Mic className="w-3 h-3 text-[#8B2635]" />
-                      <span>{tr('Dyktuj', 'Dictate', 'Dictar', 'Dicter')}</span>
-                    </span>
-                    <span className="px-2 py-0.5 rounded bg-[#FAF8F5] border border-[#DDD6C8] font-serif-literary font-bold text-[#1C1A18]">
+                    <button
+                      type="button"
+                      onClick={togglePlgDictation}
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded border font-medium transition-colors cursor-pointer ${
+                        isPlgListening
+                          ? 'bg-[#8B2635] border-[#8B2635] text-[#FAF8F5]'
+                          : 'bg-[#FAF8F5] border-[#DDD6C8] hover:bg-[#EAE5DA] text-[#1C1A18]'
+                      }`}
+                    >
+                      {isPlgListening ? (
+                        <>
+                          <MicOff className="w-3 h-3 animate-pulse" />
+                          <span>{tr('Słucham...', 'Listening...', 'Escuchando...', 'Écoute...')}</span>
+                        </>
+                      ) : (
+                        <>
+                          <Mic className="w-3 h-3 text-[#8B2635]" />
+                          <span>{tr('Dyktuj', 'Dictate', 'Dictar', 'Dicter')}</span>
+                        </>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyPlgFormatting('**')}
+                      title={tr('Pogrubienie', 'Bold', 'Negrita', 'Gras')}
+                      className="px-2 py-1 rounded bg-[#FAF8F5] hover:bg-[#EAE5DA] border border-[#DDD6C8] font-serif-literary font-bold text-[#1C1A18] cursor-pointer"
+                    >
                       B
-                    </span>
-                    <span className="px-2 py-0.5 rounded bg-[#FAF8F5] border border-[#DDD6C8] font-serif-literary italic text-[#1C1A18]">
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyPlgFormatting('*')}
+                      title={tr('Kursywa', 'Italic', 'Cursiva', 'Italique')}
+                      className="px-2 py-1 rounded bg-[#FAF8F5] hover:bg-[#EAE5DA] border border-[#DDD6C8] font-serif-literary italic text-[#1C1A18] cursor-pointer"
+                    >
                       I
-                    </span>
-                    <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#FAF8F5] border border-[#DDD6C8] text-[#524D46]">
-                      <span>{tr('Popraw pisownię', 'Fix spelling', 'Corregir ortografía', 'Corriger')}</span>
-                    </span>
+                    </button>
+                    {!plgDraft.trim() && (
+                      <button
+                        type="button"
+                        onClick={() => handlePlgDraftChange(targetHeroText)}
+                        className="hidden sm:inline-flex items-center gap-1 px-2 py-1 rounded bg-[#FAF8F5] hover:bg-[#EAE5DA] border border-[#DDD6C8] text-[#524D46] cursor-pointer"
+                      >
+                        <span>
+                          {tr('Wstaw przykład', 'Try sample thought', 'Probar ejemplo', 'Essayer un exemple')}
+                        </span>
+                      </button>
+                    )}
                   </div>
                   <span className="text-[10px] text-[#7A756D]">
-                    {tr('Przyklejony pasek narzędzi', 'Sticky writing bar', 'Barra fija al desplazar', 'Barre d’outils fixe')}
+                    {plgDraft.trim().length > 0
+                      ? tr('Zapisano w pamięci przeglądarki', 'Saved in localStorage', 'Guardado en navegador', 'Sauvegardé localement')
+                      : tr('Zacznij pisać poniżej', 'Type directly below', 'Escribe abajo', 'Écrivez ci-dessous')}
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 pt-2 items-start">
-                  {/* Simulated Active Cursor Margin Hint — ON THE LEFT just like in the app */}
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 pt-1 items-start">
+                  {/* Clickable Active Margin Follow-Up Hint — ON THE LEFT */}
                   <div className="sm:col-span-4 pt-1 border-b sm:border-b-0 sm:border-r border-[#EAE5DA] pb-2.5 sm:pb-0 sm:pr-3.5 space-y-1.5 text-left">
                     <div className="flex items-center justify-between text-[10px] font-mono-meta text-[#7A756D]">
-                      <span>{tr('Margines', 'Margin', 'Margen', 'Marge')}</span>
+                      <span>{tr('Margines (kliknij)', 'Margin (click)', 'Margen (clic)', 'Marge (cliquer)')}</span>
                       <Eye className="w-3 h-3 text-[#7A756D]" />
                     </div>
-                    <p className="text-xs font-serif-literary italic text-[#6E675F] leading-snug">
-                      {tr(
-                        '„Jakie myśli pojawiły się, kiedy słuchałeś deszczu w ciszy?” →',
-                        '“What thoughts appeared while you were listening to the rain?” →',
-                        '«¿Qué pensamientos surgieron mientras escuchabas la lluvia?» →',
-                        '« Quelles pensées sont venues pendant que vous écoutiez la pluie ? » →'
-                      )}
-                    </p>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        insertPlgMarginHint(
+                          activeHeroSeo.followUpQuestions[0] ||
+                            getHintText(activeHeroPrompt, lang)
+                        )
+                      }
+                      className="text-left text-xs font-serif-literary italic text-[#6E675F] hover:text-[#1C1A18] leading-snug transition-colors cursor-pointer"
+                    >
+                      „{activeHeroSeo.followUpQuestions[0] || getHintText(activeHeroPrompt, lang)}” →
+                    </button>
                   </div>
 
-                  {/* Written text column on the right of the margin */}
-                  <div className="sm:col-span-8 min-h-[96px] text-base font-serif-literary text-[#1C1A18] leading-relaxed text-left">
-                    <span>{typedHeroText}</span>
-                    <span className="inline-block w-[2px] h-4 bg-[#8B2635] ml-0.5 align-middle animate-pulse" />
+                  {/* Live Interactive Textarea on the Right of the Margin */}
+                  <div className="sm:col-span-8 text-left">
+                    <textarea
+                      ref={heroTextareaRef}
+                      value={plgDraft}
+                      onChange={e => handlePlgDraftChange(e.target.value)}
+                      rows={4}
+                      aria-label={getPromptText(activeHeroPrompt, lang)}
+                      placeholder={tr(
+                        'Napisz tu pierwsze zdanie swojej dzisiejszej refleksji... (np. Dzisiaj po południu zauważyłem, jak światło wpada przez okno...)',
+                        'Write the first sentence of today’s reflection right here... (e.g. This afternoon I noticed how the light fell through the window...)',
+                        'Escribe aquí la primera frase de tu reflexión de hoy...',
+                        'Écrivez ici la première phrase de votre réflexion du jour...'
+                      )}
+                      className="w-full min-h-[112px] bg-transparent text-base font-serif-literary text-[#1C1A18] placeholder:text-[#9E978C] placeholder:italic leading-relaxed resize-y focus:outline-none"
+                    />
                   </div>
                 </div>
               </div>
 
-              {/* Rotating companion typing at the bottom of the Hero sheet (different animal each day/visit) */}
-              <div className="mt-4 pt-2 border-t border-[#ECE7DC]/70">
+              {/* Rotating companion + Primary "Save Entry" Conversion Bar */}
+              <div className="mt-3 pt-2 border-t border-[#ECE7DC]/70">
                 <CompanionDesk
                   companionId={showcaseCompanion}
-                  isTyping={isHeroTyping}
+                  isTyping={isPlgUserTyping || (plgDraft.length === 0 && isHeroTyping)}
                   isSealed={false}
                   isSearching={false}
                   lang={lang}
                   onSelectCompanion={handleNextCompanion}
                 />
-                <div className="text-center text-[10px] font-mono-meta text-[#8C857B] -mt-0.5 mb-1">
-                  {tr(
-                    'Każdego dnia i przy każdej wizycie przy biurku może towarzyszyć Ci inny zwierzak (kliknij, aby zmienić)',
-                    'Each day and on every visit, a different animal may assist you at your desk (click to switch)',
-                    'Cada día y en cada visita, un animal diferente puede acompañarte en tu escritorio (haz clic para cambiar)',
-                    'Chaque jour et à chaque visite, un animal différent peut vous accompagner (cliquez pour changer)'
-                  )}
-                </div>
-                <div className="flex items-center justify-between pt-2 text-[11px] font-mono-meta text-[#7A756D] tabular-nums">
-                  <div className="flex items-center gap-2">
-                    <span>{tr('Dziennik', 'Journal', 'Diario', 'Journal')}</span>
-                    <span aria-hidden="true">·</span>
-                    <span>{tr('Statystyki pisania', 'Statistics', 'Estadísticas', 'Statistiques')}</span>
-                    <span aria-hidden="true">·</span>
-                    <span>{tr('Klucz', 'Key', 'Clave', 'Clé')}</span>
-                  </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-2.5 border-t border-[#ECE7DC] text-[11px] font-mono-meta text-[#7A756D] tabular-nums">
                   <div className="flex items-center gap-2">
                     <span>
-                      {typedHeroText.trim() ? typedHeroText.trim().split(/\s+/).length : 0}{' '}
-                      {tr('słów', 'words', 'palabras', 'mots')}
+                      {plgWordCount} {tr('słów', 'words', 'palabras', 'mots')}
                     </span>
+                    {plgWritingSeconds > 0 && (
+                      <>
+                        <span aria-hidden="true">·</span>
+                        <span>{plgWritingSeconds}s</span>
+                      </>
+                    )}
                     <span aria-hidden="true">·</span>
-                    <span className="text-[#1C1A18] font-medium">
-                      {tr('Zamknij dzień', 'Close day', 'Cerrar día', 'Clore le jour')}
-                    </span>
+                    <span className="text-[#2E6F40]">AES-256</span>
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={handleSaveEntryTrigger}
+                    className="px-4 py-2 rounded-lg bg-[#1C1A18] hover:bg-[#33302B] text-[#FAF8F5] text-xs font-mono-meta font-medium inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
+                  >
+                    <Lock className="w-3 h-3 text-[#EBC5CF]" />
+                    <span>
+                      {tr(
+                        'Zapisz wpis (Save Entry) →',
+                        'Save Entry →',
+                        'Guardar entrada →',
+                        'Enregistrer l’entrée →'
+                      )}
+                    </span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -1825,19 +2259,41 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </div>
 
                 <div className="space-y-3 my-auto">
-                  {categoryPrompts.slice(0, 2).map(p => (
-                    <div
-                      key={p.id}
-                      className="p-4 rounded-lg bg-[#F7F5F0] space-y-1"
-                    >
-                      <div className="text-base font-serif-literary font-medium text-[#1C1A18]">
-                        {getPromptText(p, lang)}
-                      </div>
-                      <div className="text-xs font-serif-literary italic text-[#6E675F]">
-                        {getHintText(p, lang)}
-                      </div>
-                    </div>
-                  ))}
+                  {categoryPrompts.slice(0, 2).map(p => {
+                    const pSlug = getPromptSlug(p);
+                    return (
+                      <a
+                        key={p.id}
+                        href={`/prompts/${pSlug}`}
+                        onClick={e => handleSpaLink(e, `/prompts/${pSlug}`)}
+                        className="block p-4 rounded-lg bg-[#F7F5F0] hover:bg-[#EFECE4] border border-transparent hover:border-[#DDD6C8] transition-all space-y-1 group"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="text-base font-serif-literary font-medium text-[#1C1A18] group-hover:text-[#8B2635] transition-colors">
+                            {getPromptText(p, lang)}
+                          </div>
+                          <ArrowRight className="w-3.5 h-3.5 text-[#7A756D] group-hover:text-[#1C1A18] shrink-0" />
+                        </div>
+                        <div className="text-xs font-serif-literary italic text-[#6E675F]">
+                          {getHintText(p, lang)}
+                        </div>
+                      </a>
+                    );
+                  })}
+                </div>
+
+                <div className="pt-2 border-t border-[#ECE7DC] flex items-center justify-between text-xs font-mono-meta">
+                  <span className="text-[#7A756D]">
+                    {tr('47 indeksowanych pytań refleksyjnych', '47 indexable reflection prompts', '47 preguntas de reflexión', '47 questions de réflexion')}
+                  </span>
+                  <a
+                    href="/prompts"
+                    onClick={e => handleSpaLink(e, '/prompts')}
+                    className="text-[#8B2635] hover:text-[#1C1A18] underline underline-offset-4 font-medium inline-flex items-center gap-1"
+                  >
+                    <BookOpen className="w-3.5 h-3.5" />
+                    <span>{tr('Otwórz bibliotekę /prompts →', 'Browse /prompts library →', 'Ver biblioteca /prompts →', 'Voir /prompts →')}</span>
+                  </a>
                 </div>
               </div>
 
@@ -2747,16 +3203,42 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </section>
       </main>
 
-      {/* QUIET FOOTER */}
+      {/* QUIET FOOTER WITH CRAWLABLE PROGRAMMATIC PROMPT LINKS */}
       <footer
         className={`${
           showAppLoginScreen ? 'hidden' : 'block'
-        } border-t border-[#E5DFD3] bg-[#F7F5F0] py-6`}
+        } border-t border-[#E5DFD3] bg-[#F7F5F0] py-8`}
       >
-        <div className="max-w-6xl mx-auto px-6 flex items-center justify-between gap-4 text-xs font-mono-meta text-[#7A756D]">
-          <span className="inline-flex items-center gap-2 text-[#1C1A18] font-serif-literary font-semibold text-sm">
-            <span>{tr('Momenty', 'Moments', 'Moments', 'Moments')}</span>
-          </span>
+        <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs font-mono-meta text-[#7A756D]">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+            <span className="inline-flex items-center gap-2 text-[#1C1A18] font-serif-literary font-semibold text-sm">
+              <span>{tr('Momenty', 'Moments', 'Moments', 'Moments')}</span>
+            </span>
+            <span aria-hidden="true">·</span>
+            <a
+              href="/prompts"
+              onClick={e => handleSpaLink(e, '/prompts')}
+              className="hover:text-[#1C1A18] underline underline-offset-4"
+            >
+              {tr('Biblioteka pytań (/prompts)', 'Reflection Prompts (/prompts)', 'Preguntas (/prompts)', 'Questions (/prompts)')}
+            </a>
+            <span aria-hidden="true">·</span>
+            <a
+              href="/prompts/overcoming-burnout"
+              onClick={e => handleSpaLink(e, '/prompts/overcoming-burnout')}
+              className="hover:text-[#1C1A18] underline underline-offset-4"
+            >
+              /prompts/overcoming-burnout
+            </a>
+            <span aria-hidden="true">·</span>
+            <a
+              href="/prompts/evening-gratitude"
+              onClick={e => handleSpaLink(e, '/prompts/evening-gratitude')}
+              className="hover:text-[#1C1A18] underline underline-offset-4"
+            >
+              /prompts/evening-gratitude
+            </a>
+          </div>
 
           <button
             type="button"
