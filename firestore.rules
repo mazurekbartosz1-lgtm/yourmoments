@@ -1,0 +1,155 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default-deny global safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn()
+        && request.auth.token.email == 'mazurekbartosz1@gmail.com'
+        && request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['id', 'companion', 'currentStreak', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'companion', 'currentStreak', 'lastActiveDate', 'deviceName', 'encryptedVaultKey', 'encryptedKeyHistory', 'keySyncMode', 'createdAt', 'updatedAt'])
+        && data.id is string && data.id.size() <= 128
+        && data.companion in ['crocodile', 'wolf', 'axolotl', 'bear', 'panda', 'dragon', 'cat', 'fox', 'dinosaur', 'lizard', 'bird']
+        && data.currentStreak is int && data.currentStreak >= 0
+        && (!('lastActiveDate' in data) || (data.lastActiveDate is string && data.lastActiveDate.size() <= 10))
+        && (!('deviceName' in data) || (data.deviceName is string && data.deviceName.size() <= 120))
+        && (!('encryptedVaultKey' in data) || (data.encryptedVaultKey is string && data.encryptedVaultKey.size() <= 2048))
+        && (!('encryptedKeyHistory' in data) || (data.encryptedKeyHistory is list && data.encryptedKeyHistory.size() <= 10 && (data.encryptedKeyHistory.size() == 0 || (data.encryptedKeyHistory[0] is string && data.encryptedKeyHistory[0].size() <= 2048))))
+        && (!('keySyncMode' in data) || (data.keySyncMode in ['auto', 'pin']))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidJournalEntry(data) {
+      return data.keys().hasAll(['id', 'userId', 'promptId', 'date', 'encryptedContent', 'iv', 'salt', 'characterCount', 'wordCount', 'isSealed', 'isEncrypted', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'userId', 'promptId', 'date', 'encryptedContent', 'iv', 'salt', 'characterCount', 'wordCount', 'writingTimeSeconds', 'isSealed', 'isEncrypted', 'promptHistoryIds', 'deviceName', 'createdAt', 'updatedAt'])
+        && data.id is string && data.id.size() <= 128
+        && data.userId is string && data.userId.size() <= 128
+        && data.promptId is string && data.promptId.size() <= 64
+        && data.date is string && data.date.size() <= 10
+        && data.encryptedContent is string && data.encryptedContent.size() <= 100000
+        && data.iv is string && data.iv.size() <= 64
+        && data.salt is string && data.salt.size() <= 64
+        && data.characterCount is int && data.characterCount >= 0
+        && data.wordCount is int && data.wordCount >= 0
+        && (!('writingTimeSeconds' in data) || (data.writingTimeSeconds is int && data.writingTimeSeconds >= 0))
+        && (!('promptHistoryIds' in data) || (data.promptHistoryIds is list && data.promptHistoryIds.size() <= 10 && (data.promptHistoryIds.size() == 0 || (data.promptHistoryIds[0] is string && data.promptHistoryIds[0].size() <= 64))))
+        && (!('deviceName' in data) || (data.deviceName is string && data.deviceName.size() <= 120))
+        && data.isSealed is bool
+        && data.isEncrypted is bool
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidFeedback(data) {
+      return data.keys().hasAll(['id', 'userId', 'message', 'includeEmail', 'userEmail', 'recipientEmail', 'lang', 'createdAt'])
+        && data.keys().hasOnly(['id', 'userId', 'message', 'includeEmail', 'userEmail', 'recipientEmail', 'lang', 'createdAt'])
+        && data.id is string && data.id.size() > 0 && data.id.size() <= 128
+        && data.userId is string && data.userId.size() > 0 && data.userId.size() <= 128
+        && data.message is string && data.message.size() >= 1 && data.message.size() <= 2000
+        && data.includeEmail is bool
+        && data.userEmail is string && data.userEmail.size() <= 254
+        && data.recipientEmail == 'mazurekbartosz1@gmail.com'
+        && data.lang in ['pl', 'en', 'es', 'fr']
+        && data.createdAt is timestamp;
+    }
+
+    function isValidSparkle(data) {
+      return data.keys().hasAll(['id', 'userId', 'date', 'encryptedContent', 'iv', 'salt', 'createdAt'])
+        && data.keys().hasOnly(['id', 'userId', 'date', 'periodLabel', 'encryptedContent', 'iv', 'salt', 'createdAt'])
+        && data.id is string && data.id.size() > 0 && data.id.size() <= 128
+        && data.userId is string && data.userId.size() > 0 && data.userId.size() <= 128
+        && data.date is string && data.date.size() <= 10
+        && (!('periodLabel' in data) || (data.periodLabel is string && data.periodLabel.size() <= 120))
+        && data.encryptedContent is string && data.encryptedContent.size() <= 100000
+        && data.iv is string && data.iv.size() <= 64
+        && data.salt is string && data.salt.size() <= 64
+        && data.createdAt is timestamp;
+    }
+
+    match /users/{userId} {
+      allow get: if (isOwner(userId) || isAdmin()) && isValidId(userId);
+      allow list: if isAdmin();
+      allow create: if isOwner(userId) && isValidId(userId)
+        && isValidUser(incoming())
+        && incoming().id == userId
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isOwner(userId) && isValidId(userId)
+        && isValidUser(incoming())
+        && incoming().id == userId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time;
+      allow delete: if isOwner(userId) && isValidId(userId);
+
+      match /entries/{entryId} {
+        allow get: if (isOwner(userId) || isAdmin()) && isValidId(entryId);
+        allow list: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) && isValidId(entryId)
+          && isValidJournalEntry(incoming())
+          && incoming().id == entryId
+          && incoming().userId == userId
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time;
+        allow update: if isOwner(userId) && isValidId(entryId)
+          && isValidJournalEntry(incoming())
+          && incoming().id == entryId
+          && incoming().userId == userId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time;
+        allow delete: if isOwner(userId) && isValidId(entryId);
+      }
+
+      match /sparkles/{sparkleId} {
+        allow get: if (isOwner(userId) || isAdmin()) && isValidId(sparkleId);
+        allow list: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) && isValidId(sparkleId)
+          && isValidSparkle(incoming())
+          && incoming().id == sparkleId
+          && incoming().userId == userId
+          && incoming().createdAt == request.time;
+        allow update: if false;
+        allow delete: if isOwner(userId) && isValidId(sparkleId);
+      }
+    }
+
+    match /feedback/{feedbackId} {
+      allow get: if isSignedIn() && isValidId(feedbackId) && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidId(feedbackId)
+        && isValidFeedback(incoming())
+        && incoming().id == feedbackId
+        && incoming().userId == request.auth.uid
+        && incoming().createdAt == request.time;
+      allow update: if false;
+      allow delete: if isSignedIn() && isValidId(feedbackId) && (existing().userId == request.auth.uid || isAdmin());
+    }
+  }
+}

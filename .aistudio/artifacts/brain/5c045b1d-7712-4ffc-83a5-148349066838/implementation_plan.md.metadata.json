@@ -1,0 +1,6 @@
+{
+  "summary":  "Plan wdrożenia dwóch nowych funkcji w aplikacji Momenty: 1) Niedeterministycznych gwiazdek docenienia (Sparkle) pojawiających się po zamknięciu dnia w przedziale 1–4 dni, generujących kumplowskie podsumowanie ostatnich wpisów przy użyciu lekkiego modelu Gemini i zapisywanych w Dzienniku jako karty docenienia; 2) Jednorazowego, zaszyfrowanego kodem PIN udostępniania dzisiejszego zamkniętego wpisu z opcjonalnym tłumaczeniem na wybrany język i natychmiastowym samozniszczeniem po pierwszym odczytaniu.",
+  "updatedAt":  "2026-10-28T09:03:05.676279701Z",
+  "requestFeedback":  true,
+  "userFacing":  true
+}

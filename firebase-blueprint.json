@@ -1,0 +1,252 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile with selected companion and streak metrics",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "User UID matching auth.uid",
+          "maxLength": 128
+        },
+        "companion": {
+          "type": "string",
+          "description": "Selected avatar companion",
+          "enum": ["crocodile", "wolf", "axolotl", "bear", "panda", "dragon", "cat", "fox", "dinosaur", "lizard", "bird"]
+        },
+        "currentStreak": {
+          "type": "integer",
+          "description": "Current consecutive days journaling streak"
+        },
+        "lastActiveDate": {
+          "type": "string",
+          "description": "Last active journaling date (YYYY-MM-DD)",
+          "maxLength": 10
+        },
+        "deviceName": {
+          "type": "string",
+          "description": "Human-readable name of the device where the encryption key was set or used",
+          "maxLength": 120
+        },
+        "encryptedVaultKey": {
+          "type": "string",
+          "description": "AES-GCM wrapped primary encryption key for cross-device sync",
+          "maxLength": 2048
+        },
+        "encryptedKeyHistory": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Bounded list (max 10) of AES-GCM wrapped encryption keys from user devices"
+        },
+        "keySyncMode": {
+          "type": "string",
+          "description": "Whether the cloud key is wrapped automatically via account secret or with a custom user PIN/password",
+          "enum": ["auto", "pin"]
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Account profile creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Last profile update timestamp"
+        }
+      },
+      "required": ["id", "companion", "currentStreak", "createdAt", "updatedAt"]
+    },
+    "JournalEntry": {
+      "title": "JournalEntry",
+      "description": "Encrypted daily journal entry containing client-encrypted ciphertext, writing time in seconds, device name, and metadata",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Entry document ID",
+          "maxLength": 128
+        },
+        "userId": {
+          "type": "string",
+          "description": "Owner user UID",
+          "maxLength": 128
+        },
+        "promptId": {
+          "type": "string",
+          "description": "ID of the daily prompt answered",
+          "maxLength": 64
+        },
+        "date": {
+          "type": "string",
+          "description": "Date of the entry formatted YYYY-MM-DD",
+          "maxLength": 10
+        },
+        "encryptedContent": {
+          "type": "string",
+          "description": "Client-side AES-GCM encrypted ciphertext payload",
+          "maxLength": 100000
+        },
+        "iv": {
+          "type": "string",
+          "description": "Initialization vector for AES-GCM decryption",
+          "maxLength": 64
+        },
+        "salt": {
+          "type": "string",
+          "description": "PBKDF2 key derivation salt",
+          "maxLength": 64
+        },
+        "characterCount": {
+          "type": "integer",
+          "description": "Total character count in the entry"
+        },
+        "wordCount": {
+          "type": "integer",
+          "description": "Total word count in the entry"
+        },
+        "writingTimeSeconds": {
+          "type": "integer",
+          "description": "Active writing duration in seconds spent on this entry"
+        },
+        "promptHistoryIds": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "IDs of prompts seen for this day"
+        },
+        "deviceName": {
+          "type": "string",
+          "description": "Human-readable name of the device that encrypted this entry",
+          "maxLength": 120
+        },
+        "isSealed": {
+          "type": "boolean",
+          "description": "Whether the daily entry has been finalized and sealed"
+        },
+        "isEncrypted": {
+          "type": "boolean",
+          "description": "Flag confirming content is encrypted client-side"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Entry creation server timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Entry last update server timestamp"
+        }
+      },
+      "required": ["id", "userId", "promptId", "date", "encryptedContent", "iv", "salt", "characterCount", "wordCount", "isSealed", "isEncrypted", "createdAt", "updatedAt"]
+    },
+    "Feedback": {
+      "title": "Feedback",
+      "description": "User feedback submission stored in Firestore and forwarded to mazurekbartosz1@gmail.com",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Feedback document ID",
+          "maxLength": 128
+        },
+        "userId": {
+          "type": "string",
+          "description": "Author user UID",
+          "maxLength": 128
+        },
+        "message": {
+          "type": "string",
+          "description": "Feedback message text",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "includeEmail": {
+          "type": "boolean",
+          "description": "Whether the user opted to include their email address"
+        },
+        "userEmail": {
+          "type": "string",
+          "description": "User email address when includeEmail is true, or empty string",
+          "maxLength": 254
+        },
+        "recipientEmail": {
+          "type": "string",
+          "description": "Target recipient email address for feedback notifications",
+          "maxLength": 254
+        },
+        "lang": {
+          "type": "string",
+          "description": "Active application language when submitted",
+          "enum": ["pl", "en", "es", "fr"]
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Feedback creation server timestamp"
+        }
+      },
+      "required": ["id", "userId", "message", "includeEmail", "userEmail", "recipientEmail", "lang", "createdAt"]
+    },
+    "SparkleCard": {
+      "title": "SparkleCard",
+      "description": "Encrypted buddy appreciation summary card saved in the user's journal",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Sparkle card ID",
+          "maxLength": 128
+        },
+        "userId": {
+          "type": "string",
+          "description": "Owner user UID",
+          "maxLength": 128
+        },
+        "date": {
+          "type": "string",
+          "description": "Date the sparkle card was generated (YYYY-MM-DD)",
+          "maxLength": 10
+        },
+        "periodLabel": {
+          "type": "string",
+          "description": "Date range covered by this summary",
+          "maxLength": 120
+        },
+        "encryptedContent": {
+          "type": "string",
+          "description": "Client-side AES-GCM encrypted JSON payload of the sparkle summary",
+          "maxLength": 100000
+        },
+        "iv": {
+          "type": "string",
+          "description": "Initialization vector for AES-GCM decryption",
+          "maxLength": 64
+        },
+        "salt": {
+          "type": "string",
+          "description": "PBKDF2 key derivation salt",
+          "maxLength": 64
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Creation server timestamp"
+        }
+      },
+      "required": ["id", "userId", "date", "encryptedContent", "iv", "salt", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Stores user profile and chosen typing companion"
+    },
+    "/users/{userId}/entries/{entryId}": {
+      "schema": "JournalEntry",
+      "description": "Stores encrypted daily journal entries strictly private to the user"
+    },
+    "/users/{userId}/sparkles/{sparkleId}": {
+      "schema": "SparkleCard",
+      "description": "Stores encrypted Sparkle appreciation cards in the user's journal"
+    },
+    "/feedback/{feedbackId}": {
+      "schema": "Feedback",
+      "description": "Stores user feedback submissions"
+    }
+  }
+}

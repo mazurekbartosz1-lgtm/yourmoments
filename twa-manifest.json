@@ -1,0 +1,52 @@
+{
+  "packageId": "app.momenty.dziennik",
+  "host": "ais-pre-eceuqixuqw4dcsthqd56jo-41510066825.europe-west2.run.app",
+  "name": "Momenty — Cichy Dziennik",
+  "launcherName": "Momenty",
+  "display": "standalone",
+  "themeColor": "#F7F5F0",
+  "themeColorDark": "#1C1A18",
+  "navigationColor": "#F7F5F0",
+  "navigationColorDark": "#1C1A18",
+  "navigationDividerColor": "#EAE5DA",
+  "navigationDividerColorDark": "#2A2724",
+  "backgroundColor": "#F7F5F0",
+  "enableNotifications": true,
+  "startUrl": "/",
+  "iconUrl": "https://ais-pre-eceuqixuqw4dcsthqd56jo-41510066825.europe-west2.run.app/pwa-512x512.png",
+  "maskableIconUrl": "https://ais-pre-eceuqixuqw4dcsthqd56jo-41510066825.europe-west2.run.app/pwa-maskable-512x512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "momenty-key"
+  },
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "shortcuts": [
+    {
+      "name": "Dzisiejsze pytanie",
+      "shortName": "Pytanie dnia",
+      "url": "/?mode=daily",
+      "chosenIconUrl": "https://ais-pre-eceuqixuqw4dcsthqd56jo-41510066825.europe-west2.run.app/pwa-192x192.png"
+    },
+    {
+      "name": "Zapisz wolną myśl",
+      "shortName": "Wolna myśl",
+      "url": "/?mode=free",
+      "chosenIconUrl": "https://ais-pre-eceuqixuqw4dcsthqd56jo-41510066825.europe-west2.run.app/pwa-192x192.png"
+    }
+  ],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://ais-pre-eceuqixuqw4dcsthqd56jo-41510066825.europe-west2.run.app/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "minSdkVersion": 21,
+  "orientation": "portrait-primary",
+  "fingerprints": []
+}

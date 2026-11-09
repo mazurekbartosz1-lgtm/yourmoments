@@ -1,0 +1,65 @@
+{
+  "id": "/",
+  "name": "Momenty — Cichy Dziennik",
+  "short_name": "Momenty",
+  "description": "Cicha przestrzeń codziennego pisania z pytaniem dnia, dyktowaniem głosowym i szyfrowaniem end-to-end.",
+  "lang": "pl",
+  "dir": "ltr",
+  "theme_color": "#F7F5F0",
+  "background_color": "#F7F5F0",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "start_url": "/",
+  "categories": ["lifestyle", "productivity", "books"],
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dzisiejsze pytanie",
+      "short_name": "Pytanie dnia",
+      "description": "Otwórz dzisiejsze pytanie i zacznij pisać",
+      "url": "/?mode=daily",
+      "icons": [
+        {
+          "src": "/pwa-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Zapisz wolną myśl",
+      "short_name": "Wolna myśl",
+      "description": "Swobodny wpis bez pytania dnia",
+      "url": "/?mode=free",
+      "icons": [
+        {
+          "src": "/pwa-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
+}
