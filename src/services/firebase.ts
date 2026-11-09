@@ -1,5 +1,13 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signOut,
+  onAuthStateChanged,
+  Auth,
+  User as FirebaseUser,
+} from 'firebase/auth';
 import {
   getFirestore,
   doc,
@@ -10,9 +18,18 @@ import firebaseAppletConfig from '../../firebase-applet-config.json';
 
 const env = (import.meta as unknown as { env?: Record<string, string | undefined> }).env || {};
 
+const rawApiKey = (env.VITE_FIREBASE_API_KEY || firebaseAppletConfig.apiKey || '').trim();
+export const hasValidFirebaseApiKey = Boolean(rawApiKey && rawApiKey.length > 10);
+
+// Use a syntactically valid placeholder key when VITE_FIREBASE_API_KEY is not injected in preview
+// so Firebase SDK initialization (getAuth / getFirestore) never crashes the app at import time.
+const safeInitApiKey = hasValidFirebaseApiKey
+  ? rawApiKey
+  : 'AIzaSyPreviewPlaceholderKeyForLocalUI00000';
+
 export const resolvedFirebaseConfig = {
   ...firebaseAppletConfig,
-  apiKey: (env.VITE_FIREBASE_API_KEY || firebaseAppletConfig.apiKey || '').trim(),
+  apiKey: safeInitApiKey,
   projectId: (env.VITE_FIREBASE_PROJECT_ID || firebaseAppletConfig.projectId || '').trim(),
   authDomain: (env.VITE_FIREBASE_AUTH_DOMAIN || firebaseAppletConfig.authDomain || '').trim(),
   firestoreDatabaseId: (
@@ -39,7 +56,7 @@ const app = getApps().length > 0 ? getApp() : initializeApp(resolvedFirebaseConf
 export const db = getFirestore(app, resolvedFirebaseConfig.firestoreDatabaseId);
 
 // Enable local IndexedDB persistence so past journal entries are available offline when browsing the archive
-if (typeof window !== 'undefined') {
+if (typeof window !== 'undefined' && hasValidFirebaseApiKey) {
   enableIndexedDbPersistence(db).catch((err: { code?: string }) => {
     if (err.code === 'failed-precondition') {
       console.warn(
@@ -53,8 +70,34 @@ if (typeof window !== 'undefined') {
   });
 }
 
-export const auth = getAuth(app);
+let authInstance: Auth | null = null;
+try {
+  authInstance = getAuth(app);
+} catch (err) {
+  console.warn('Firebase Auth initialized in preview fallback mode:', err);
+}
+
+export const auth = authInstance as Auth;
 export const googleProvider = new GoogleAuthProvider();
+
+export function subscribeToAuthChanges(
+  callback: (user: FirebaseUser | null) => void
+): () => void {
+  if (!hasValidFirebaseApiKey || !authInstance) {
+    // Immediately resolve as signed-out guest so the preview loads without delay or error
+    queueMicrotask(() => callback(null));
+    return () => {};
+  }
+  try {
+    return onAuthStateChanged(authInstance, callback, err => {
+      console.warn('Auth state listener warning:', err);
+      callback(null);
+    });
+  } catch {
+    queueMicrotask(() => callback(null));
+    return () => {};
+  }
+}
 
 export function formatFirebaseAuthError(
   err: unknown,
@@ -82,16 +125,26 @@ export function formatFirebaseAuthError(
   }
 
   if (
+    rawMsg.includes('API_KEY_HTTP_REFERRER_BLOCKED') ||
+    rawMsg.includes('Requests from referer')
+  ) {
+    if (lang === 'en') {
+      return `Domain "https://${hostname}/*" is blocked by Google Cloud API Key Website Restrictions. Add "https://${hostname}/*" in Google Cloud Console → APIs & Services → Credentials → Browser key.`;
+    }
+    return `Domena „https://${hostname}/*” jest zablokowana w ograniczeniach klucza API (Website restrictions). Dopisz „https://${hostname}/*” w Google Cloud Console → APIs & Services → Credentials → Browser key.`;
+  }
+
+  if (
     code === 'auth/invalid-api-key' ||
     code === 'auth/api-key-not-valid' ||
     rawMsg.includes('api-key-not-valid') ||
     rawMsg.includes('invalid-api-key') ||
-    !resolvedFirebaseConfig.apiKey
+    !hasValidFirebaseApiKey
   ) {
     if (lang === 'en') {
-      return 'Missing or invalid VITE_FIREBASE_API_KEY. Set your rotated Firebase API key in Vercel Project Settings → Environment Variables as VITE_FIREBASE_API_KEY and redeploy.';
+      return 'Preview mode (VITE_FIREBASE_API_KEY not set in this environment). You can test the full interface right here using the preview button!';
     }
-    return 'Brak lub nieprawidłowy klucz VITE_FIREBASE_API_KEY. Dodaj zrotowany klucz API Firebase w ustawieniach projektu Vercel (Environment Variables → VITE_FIREBASE_API_KEY) i wykonaj Redeploy.';
+    return 'Tryb podglądu (brak klucza VITE_FIREBASE_API_KEY w tym środowisku). Możesz przetestować pełny interfejs po zalogowaniu klikając „Podgląd aplikacji”!';
   }
 
   return rawMsg;
@@ -131,13 +184,13 @@ export function handleFirestoreError(
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? error.message : String(error),
     authInfo: {
-      userId: auth.currentUser?.uid,
-      email: auth.currentUser?.email,
-      emailVerified: auth.currentUser?.emailVerified,
-      isAnonymous: auth.currentUser?.isAnonymous,
-      tenantId: auth.currentUser?.tenantId,
+      userId: auth?.currentUser?.uid,
+      email: auth?.currentUser?.email,
+      emailVerified: auth?.currentUser?.emailVerified,
+      isAnonymous: auth?.currentUser?.isAnonymous,
+      tenantId: auth?.currentUser?.tenantId,
       providerInfo:
-        auth.currentUser?.providerData?.map(provider => ({
+        auth?.currentUser?.providerData?.map(provider => ({
           providerId: provider.providerId,
           email: provider.email,
         })) || [],
@@ -151,10 +204,7 @@ export function handleFirestoreError(
 
 // Test initial connection to Firestore
 export async function testFirestoreConnection() {
-  if (!resolvedFirebaseConfig.apiKey) {
-    console.warn(
-      'VITE_FIREBASE_API_KEY is not set. Add VITE_FIREBASE_API_KEY to your environment variables (.env or Vercel settings).'
-    );
+  if (!hasValidFirebaseApiKey) {
     return;
   }
   try {
@@ -167,3 +217,4 @@ export async function testFirestoreConnection() {
 }
 
 export { signInWithPopup, signOut };
+

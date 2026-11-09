@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { User as FirebaseUser } from 'firebase/auth';
 import {
   doc,
   getDoc,
@@ -26,6 +26,8 @@ import {
   OperationType,
   testFirestoreConnection,
   formatFirebaseAuthError,
+  hasValidFirebaseApiKey,
+  subscribeToAuthChanges,
 } from './services/firebase';
 import {
   encryptText,
@@ -239,6 +241,25 @@ export default function App() {
   const handleGoogleLogin = async () => {
     setIsAuthLoading(true);
     setAuthError(null);
+    if (!hasValidFirebaseApiKey) {
+      // In AI Studio preview (where VITE_FIREBASE_API_KEY is not injected), open a local preview session
+      const previewUser = {
+        uid: 'aistudio_preview_user',
+        displayName: 'Bartek',
+        email: 'mazurekbartosz1@gmail.com',
+        photoURL: null,
+      } as unknown as FirebaseUser;
+      setCurrentUser(previewUser);
+      setIsInitialDataLoading(false);
+      setShowLandingPreview(false);
+      if (typeof window !== 'undefined' && window.location.pathname.startsWith('/prompts')) {
+        window.history.pushState({}, '', '/');
+        setCurrentPathname('/');
+      }
+      setIsAuthLoading(false);
+      return;
+    }
+
     try {
       await signInWithPopup(auth, googleProvider);
       if (typeof window !== 'undefined' && window.location.pathname.startsWith('/prompts')) {
@@ -264,6 +285,11 @@ export default function App() {
   };
 
   const handleSignOut = async () => {
+    if (!hasValidFirebaseApiKey) {
+      setCurrentUser(null);
+      setShowLandingPreview(false);
+      return;
+    }
     try {
       await signOut(auth);
       setShowLandingPreview(false);
@@ -397,7 +423,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async user => {
+    const unsubscribe = subscribeToAuthChanges(async user => {
       if (user) {
         if (loadedUidRef.current !== user.uid) {
           setIsInitialDataLoading(true);
@@ -438,6 +464,7 @@ export default function App() {
       customPin?: string,
       deviceLabel?: string
     ) => {
+      if (!hasValidFirebaseApiKey) return;
       const wrapSecret =
         mode === 'pin'
           ? customPin || getStoredPinPassphrase(uid) || ''
@@ -475,6 +502,38 @@ export default function App() {
 
   const loadUserData = useCallback(async () => {
     if (!currentUser) {
+      setIsInitialDataLoading(false);
+      return;
+    }
+
+    if (!hasValidFirebaseApiKey) {
+      const localDraft =
+        localStorage.getItem(`kronika_draft_${todayKey}`) ||
+        localStorage.getItem('kronika_plg_draft');
+      if (localDraft) {
+        try {
+          const parsed = JSON.parse(localDraft);
+          setContent(parsed.content || '');
+          setIsSealed(Boolean(parsed.isSealed));
+          if (typeof parsed.writingTimeSeconds === 'number') {
+            setWritingTimeSeconds(parsed.writingTimeSeconds);
+          }
+          if (parsed.promptId) {
+            setAnsweredPromptId(parsed.promptId);
+            setIsFreeThoughtMode(parsed.promptId === FREE_THOUGHT_PROMPT_ID);
+          }
+        } catch {
+          setContent(localDraft);
+        }
+      }
+      let activeKey = getStoredJournalKey(currentUser.uid);
+      if (!activeKey) {
+        activeKey = generateJournalKey();
+        saveJournalKey(currentUser.uid, activeKey, true, getStoredDeviceName());
+      }
+      setEncryptionKey(activeKey);
+      setKeyring(getStoredKeyring(currentUser.uid));
+      loadedUidRef.current = currentUser.uid;
       setIsInitialDataLoading(false);
       return;
     }
@@ -1207,12 +1266,12 @@ export default function App() {
             isEncrypted: true,
           };
 
-          if (typeof navigator !== 'undefined' && !navigator.onLine) {
+          if ((typeof navigator !== 'undefined' && !navigator.onLine) || !hasValidFirebaseApiKey) {
             localStorage.setItem(
               `kronika_pending_sync_${todayKey}`,
               JSON.stringify(pendingSyncPayload)
             );
-            setSaveStatus('offline');
+            setSaveStatus(hasValidFirebaseApiKey ? 'offline' : 'saved');
             lastSavedContentRef.current = textToSave;
             return;
           }
@@ -1375,7 +1434,7 @@ export default function App() {
     const newStreak = Math.max(1, trueStreak);
     setStreak(newStreak);
 
-    if (currentUser) {
+    if (currentUser && hasValidFirebaseApiKey) {
       try {
         const userRef = doc(db, 'users', currentUser.uid);
         await updateDoc(userRef, {
@@ -1501,7 +1560,7 @@ export default function App() {
 
       // Encrypt and save Sparkle Appreciation Card in Firestore /users/{uid}/sparkles/{cardId}
       const keyToUse = encryptionKey || keyring[0];
-      if (currentUser && keyToUse) {
+      if (currentUser && keyToUse && hasValidFirebaseApiKey) {
         try {
           for (const oldId of staleSameDayIds) {
             deleteDoc(doc(db, 'users', currentUser.uid, 'sparkles', oldId)).catch(() => {});
@@ -1550,7 +1609,7 @@ export default function App() {
     setCompanionId(newId);
     localStorage.setItem('kronika_companion', newId);
 
-    if (currentUser) {
+    if (currentUser && hasValidFirebaseApiKey) {
       try {
         const userRef = doc(db, 'users', currentUser.uid);
         await updateDoc(userRef, {
