@@ -2319,26 +2319,47 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <button
                     type="button"
                     onClick={() => scrollToSection('flow-section')}
-                    className="px-2.5 py-1 rounded border border-[#DDD6C8] bg-[#F5F2EB] hover:bg-[#EAE5DA] text-[#524D46] hover:text-[#1C1A18] transition-colors cursor-pointer shrink-0"
+                    className="px-2.5 py-1 rounded border border-[#DDD6C8] bg-[#F5F2EB] hover:bg-[#EAE5DA] text-[#524D46] hover:text-[#1C1A18] transition-colors cursor-pointer shrink-0 inline-flex items-center gap-1.5"
                   >
-                    {tr('01 · Rytuał', '01 · Ritual', '01 · Ritual', '01 · Rituel')}
+                    <svg
+                      viewBox="0 0 24 20"
+                      className="w-3.5 h-3 shrink-0 overflow-visible"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M12 4 C9 2.5 5 2.5 2 4 L2 16 C5 14.5 9 14.5 12 16 C15 14.5 19 14.5 22 16 L22 4 C19 2.5 15 2.5 12 4 Z"
+                        fill="#FAF8F5"
+                        stroke="#1C1A18"
+                        strokeWidth="1.5"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M12 4 L12 16"
+                        stroke="#1C1A18"
+                        strokeWidth="1.4"
+                        strokeLinecap="round"
+                      />
+                      <circle cx="17.5" cy="8.5" r="2.2" fill="#EBC5CF" stroke="#8B2635" strokeWidth="1.2" />
+                    </svg>
+                    <span>{tr('01 · Rytuał', '01 · Ritual', '01 · Ritual', '01 · Rituel')}</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => scrollToSection('mobile-section')}
-                    className="px-2.5 py-1 rounded border border-[#DDD6C8] bg-[#F5F2EB] hover:bg-[#EAE5DA] text-[#524D46] hover:text-[#1C1A18] transition-colors cursor-pointer shrink-0 inline-flex items-center gap-1"
+                    className="px-2.5 py-1 rounded border border-[#DDD6C8] bg-[#F5F2EB] hover:bg-[#EAE5DA] text-[#524D46] hover:text-[#1C1A18] transition-colors cursor-pointer shrink-0 inline-flex items-center gap-1.5"
                   >
-                    <Sparkles className="w-3 h-3 text-[#8B2635]" />
+                    <Sparkles className="w-3 h-3 text-[#8B2635] shrink-0" />
                     <span>{tr('02 · Telefon i Gwiazdki', '02 · Mobile & Stars', '02 · Móvil y Estrellas', '02 · Mobile et Étoiles')}</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => scrollToSection('security-section')}
-                    className="px-2.5 py-1 rounded border border-[#DDD6C8] bg-[#F5F2EB] hover:bg-[#EAE5DA] text-[#524D46] hover:text-[#1C1A18] transition-colors cursor-pointer shrink-0"
+                    className="px-2.5 py-1 rounded border border-[#DDD6C8] bg-[#F5F2EB] hover:bg-[#EAE5DA] text-[#524D46] hover:text-[#1C1A18] transition-colors cursor-pointer shrink-0 inline-flex items-center gap-1.5"
                   >
-                    {tr('03 · Prywatność E2EE', '03 · E2EE Privacy', '03 · Privacidad E2EE', '03 · Confidentialité E2EE')}
+                    <ShieldCheck className="w-3.5 h-3.5 text-[#2E6F40] shrink-0" />
+                    <span>{tr('03 · Prywatność E2EE', '03 · E2EE Privacy', '03 · Privacidad E2EE', '03 · Confidentialité E2EE')}</span>
                   </button>
                 </div>
               </div>
@@ -2892,7 +2913,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
            ===================================================================== */}
         <section id="mobile-section" className="border-t border-[#E5DFD3] bg-[#FAF8F5] py-16 md:py-24">
           <div className="max-w-6xl mx-auto px-6 space-y-10">
-            <div className="max-w-2xl space-y-2.5">
+            <div className="space-y-2">
               <div className="inline-flex items-center gap-2 text-xs font-mono-meta text-[#8B2635]">
                 <Sparkles className="w-4 h-4 shrink-0" />
                 <span>
@@ -2905,10 +2926,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </span>
               </div>
 
-              <h2
-                className="text-3xl sm:text-4xl font-serif-literary text-[#1C1A18] leading-tight"
-                style={{ textWrap: 'balance' }}
-              >
+              <h2 className="text-2xl sm:text-4xl font-serif-literary text-[#1C1A18] leading-tight sm:whitespace-nowrap">
                 {tr(
                   'Spokojny rytuał, który dopasowuje się do Twojego wieczoru.',
                   'A calm ritual that fits naturally into your evening.',
