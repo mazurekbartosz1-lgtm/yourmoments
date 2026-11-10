@@ -108,7 +108,7 @@ export function formatFirebaseAuthError(
   const hostname =
     typeof window !== 'undefined' && window.location?.hostname
       ? window.location.hostname
-      : 'yourmoments.vercel.app';
+      : 'www.dailymoments.app';
   const projectId = resolvedFirebaseConfig.projectId || 'gen-lang-client-0751515487';
 
   if (code === 'auth/unauthorized-domain' || rawMsg.includes('auth/unauthorized-domain')) {

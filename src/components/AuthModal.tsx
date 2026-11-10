@@ -799,10 +799,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       <button
                         type="button"
                         onClick={() => {
-                          const origin =
-                            typeof window !== 'undefined'
-                              ? window.location.origin
-                              : 'https://momenty.app';
+                          const origin = 'https://www.dailymoments.app';
                           const host = origin.replace(/^https?:\/\//, '');
                           const twaJson = {
                             packageId: androidPackageName.trim() || 'app.momenty.dziennik',

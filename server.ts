@@ -705,8 +705,19 @@ Return strictly valid JSON with two keys:
   // 6. One-Time Encrypted Entry Sharing with PIN (Self-destructs immediately upon first valid read)
   const sharesMap = loadSharesFromDisk();
 
+  app.use('/api/shares', (req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    if (req.method === 'OPTIONS') {
+      return res.status(204).end();
+    }
+    next();
+  });
+
   app.post('/api/shares', (req, res) => {
     const {
+      shareId: requestedShareId,
       encryptedContent,
       iv,
       salt,
@@ -729,7 +740,10 @@ Return strictly valid JSON with two keys:
       return res.status(400).json({ error: 'Missing encrypted payload or PIN verifier' });
     }
 
-    const shareId = crypto.randomBytes(12).toString('hex');
+    const shareId =
+      typeof requestedShareId === 'string' && /^[a-f0-9]{24}$/.test(requestedShareId)
+        ? requestedShareId
+        : crypto.randomBytes(12).toString('hex');
     const record: StoredOneTimeShare = {
       shareId,
       encryptedContent: encryptedContent.slice(0, 100000),
@@ -974,8 +988,8 @@ Return strictly valid JSON with two keys:
       .replace(/'/g, '&#39;');
   }
 
-  app.get('/robots.txt', (req, res) => {
-    const baseUrl = `${req.protocol}://${req.get('host') || 'yourmoments.vercel.app'}`;
+  app.get('/robots.txt', (_req, res) => {
+    const baseUrl = 'https://www.dailymoments.app';
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     return res.send(
       `User-agent: *\nAllow: /\nAllow: /prompts\nAllow: /prompts/\nSitemap: ${baseUrl}/sitemap.xml\n`
@@ -983,7 +997,7 @@ Return strictly valid JSON with two keys:
   });
 
   app.get('/sitemap.xml', (_req, res) => {
-    const baseUrl = 'https://yourmoments.vercel.app';
+    const baseUrl = 'https://www.dailymoments.app';
     const todayIso = new Date().toISOString().slice(0, 10);
     const urls = [
       `  <url>\n    <loc>${baseUrl}/</loc>\n    <lastmod>${todayIso}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>1.0</priority>\n  </url>`,
@@ -1001,7 +1015,7 @@ Return strictly valid JSON with two keys:
   });
 
   function injectProgrammaticPromptSeo(rawHtml: string, reqPath: string): string {
-    const baseUrl = 'https://yourmoments.vercel.app';
+    const baseUrl = 'https://www.dailymoments.app';
     if (reqPath === '/prompts' || reqPath === '/prompts/') {
       const title = 'Biblioteka pytań do dziennika i codziennej refleksji (47 Prompts) | Momenty';
       const desc =

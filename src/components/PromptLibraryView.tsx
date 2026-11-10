@@ -149,10 +149,7 @@ export const PromptLibraryView: React.FC<PromptLibraryViewProps> = ({
   useEffect(() => {
     if (typeof document === 'undefined') return;
 
-    const origin =
-      typeof window !== 'undefined' && window.location.origin
-        ? window.location.origin
-        : 'https://yourmoments.vercel.app';
+    const origin = 'https://www.dailymoments.app';
 
     if (activePrompt) {
       const seo = getPromptSeoDetails(activePrompt, lang);

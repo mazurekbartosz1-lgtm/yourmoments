@@ -161,18 +161,20 @@ export const OneTimeShareModal: React.FC<OneTimeShareModalProps> = ({
       const pinVerifierHash = await computePinVerifierHash(cleanPin, encrypted.salt);
 
       // 3. Store one-time encrypted record on server
+      const sharePayload = {
+        encryptedContent: encrypted.encryptedContent,
+        iv: encrypted.iv,
+        salt: encrypted.salt,
+        pinVerifierHash,
+        targetLang,
+        senderName,
+        date,
+      };
+
       const shareRes = await fetch('/api/shares', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          encryptedContent: encrypted.encryptedContent,
-          iv: encrypted.iv,
-          salt: encrypted.salt,
-          pinVerifierHash,
-          targetLang,
-          senderName,
-          date,
-        }),
+        body: JSON.stringify(sharePayload),
       });
 
       if (!shareRes.ok) {
@@ -180,8 +182,21 @@ export const OneTimeShareModal: React.FC<OneTimeShareModalProps> = ({
       }
 
       const { shareId } = await shareRes.json();
-      const origin = typeof window !== 'undefined' ? window.location.origin : '';
-      setShareUrl(`${origin}/?share=${shareId}`);
+      const canonicalShareDomain = 'https://www.dailymoments.app';
+
+      // If created from a preview environment (e.g. AI Studio), also sync the shareId to production
+      if (
+        typeof window !== 'undefined' &&
+        !window.location.hostname.includes('dailymoments.app')
+      ) {
+        fetch(`${canonicalShareDomain}/api/shares`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...sharePayload, shareId }),
+        }).catch(() => {});
+      }
+
+      setShareUrl(`${canonicalShareDomain}/?share=${shareId}`);
     } catch {
       setErrorMsg(
         tr(
