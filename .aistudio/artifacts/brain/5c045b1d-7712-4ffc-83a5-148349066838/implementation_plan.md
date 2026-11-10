@@ -1,122 +1,61 @@
-# Plan wdrożenia: Gwiazdki docenienia (Sparkle) oraz Jednorazowe udostępnianie wpisu z kodem PIN
+# Plan przebudowy Landing Page (PLG + Czysty, spokojny układ w stylu Karrot)
 
-Rozbudowa aplikacji **Momenty** o dwie funkcje towarzyszące zamknięciu dnia: **Gwiazdki docenienia (Sparkle)** — niedeterministycznego „dobrego kumpla”, który co 1–4 zamknięte dni czeka obok Dziennika z ciepłym, konkretnym podsumowaniem ostatnich wpisów i zapisuje je jako Kartę Docenienia — oraz **Jednorazowe udostępnianie wiadomości z kodem PIN** i automatycznym tłumaczeniem na język odbiorcy, które ulega bezpowrotnemu zaszyfrowaniu i zniszczeniu natychmiast po pierwszym odczytaniu.
+## 1. Cel zmian
+Obecna strona startowa posiada pod obszarem pisania aż **7 rozbudowanych sekcji** z wielozakładkowymi symulatorami, przez co przytłacza odwiedzających ilością tekstu i kontrolek.
 
----
-
-## User Review & Critical Decisions
-
-Poniższe decyzje zostały uzgodnione i stanowią fundament architektury rozwiązania:
-
-- **Miejsce udostępniania wpisu**: Przycisk do jednorazowego udostępnienia wiadomości jest dostępny **wyłącznie zaraz po zamknięciu dzisiejszego dnia** (na ekranie pieczęci zamkniętego dnia), podkreślając ulotny, tu-i-teraz charakter dzielenia się myślą.
-- **Reguła wygasania linku z PIN-em**: Link wygasa **natychmiast po pierwszym poprawnym wpisaniu kodu PIN i wyświetleniu wiadomości**. Odświeżenie strony lub ponowne otwarcie linku blokuje dostęp na stałe — treść zostaje bezpowrotnie usunięta z serwera po odczycie.
-- **Trwałość podsumowań Sparkle**: Po kliknięciu w gwiazdki i odczytaniu wiadomości od „kumpla”, podsumowanie **zostaje zapisane w Dzienniku jako wyróżniona Karta Docenienia**, do której można wracać między historycznymi wpisami.
-- **Niedeterministyczny rytm Sparkle (1–4 dni)**: Po każdym odebraniu podsumowania Sparkle system losuje kolejny próg w przedziale **od 1 do 4 zamkniętych dni** (`Math.floor(Math.random() * 4) + 1`). Gdy licznik zamkniętych dni osiągnie wylosowany próg, w momencie zamknięcia dnia obok przycisku Dziennika rozbłyskują gwiazdki sygnalizujące, że czeka nowe podsumowanie.
+Inspirowani czystością, oddechem i rytmem **heykarrot.com** (ale **bez** chaotycznych żółtych karteczek *„Sound familiar?”* oraz rzędów pigułek z nazwami narzędzi), odchudzimy stronę do **3 przejrzystych, spokojnych sekcji** pod edytorem oraz wzmocnimy ścieżkę **Product-Led Growth (PLG)** na samej górze strony, aby jak najwięcej osób zakładało konto od razu po napisaniu pierwszych słów.
 
 ---
 
-## 1. Overview & Core Concept
+## 2. Co zostaje i jak wzmocnimy konwersję PLG na górze strony (Above the Fold)
 
-Aplikacja **Momenty** zachowuje swój intymny, literacki charakter, wzbogacając moment zamknięcia dnia o dwa doświadczenia:
+Górna część strony (żywa kartka papieru z lisem przy biurku) pozostaje sercem strony, ale dopracujemy ją pod kątem natychmiastowej rejestracji:
 
-1. **Sparkle („Kumpel doceniający Twoje ostatnie dni”)**:
-   - Zamiast sztywnych, mechanicznych statystyk, w losowym rytmie od **1 do 4 zamkniętych dni** zaraz po zapieczętowaniu dzisiejszego wpisu koło Dziennika pojawia się pulsująca ikona gwiazdek (`Sparkles`) z subtelnym komunikatem, że czeka na Ciebie osobiste podsumowanie.
-   - Po kliknięciu w gwiazdki szybki i niskokosztowy model (`gemini-3.1-flash-lite` z automatycznym fallbackiem) analizuje wpisy z ostatnich kilku dni (do 7 dni wstecz) i zwraca się do użytkownika bezpośrednim, ciepłym tonem dobrego znajomego (*„Hej stary, dobrze zrobiłeś, bo…”*), wskazując, co było najważniejsze i dlaczego warto to docenić.
-   - Odczytane podsumowanie zapisuje się na stałe w Dzienniku jako **Karta Docenienia**.
-
-2. **Jednorazowe udostępnianie wiadomości z kodem PIN i wyborem języka**:
-   - Na ekranie zamkniętego dzisiejszego dnia pojawia się akcja **„Udostępnij jednorazowo”**.
-   - Użytkownik wybiera język docelowy wiadomości (np. pisze po polsku, ale wybiera angielski, hiszpański lub francuski dla odbiorcy) oraz otrzymuje wygenerowany (lub własny) 4-cyfrowy kod PIN.
-   - Przed wysłaniem na serwer treść (opcjonalnie przetłumaczona w locie przez lekki model językowy) jest szyfrowana po stronie klienta algorytmem **AES-GCM (256-bit)** z kluczem wyprowadzonym z kodu PIN (`PBKDF2`).
-   - Użytkownik kopiuje jednorazowy link wraz z kodem PIN. Gdy odbiorca otworzy link i wpisze poprawny PIN, serwer wydaje szyfrogram **tylko jeden raz** i natychmiast bezpowrotnie go niszczy. Odbiorca widzi wiadomość na ekranie, a każde odświeżenie lub ponowne wejście pokazuje informację, że wiadomość została już odczytana i uległa samozniszczeniu.
+1. **Natychmiastowy start z lisem i ciepłym pytaniem dnia**
+   - Zawsze startujemy od **Lisa** (`#C96839`) oraz pytania: *„Jaka jedna spokojna chwila, rozmowa lub drobiazg sprawiły, że warto było przejść przez ten dzień?”* wraz ze spójnym pytaniem pomocniczym na marginesie.
+2. **Subtelny pasek zapisu PLG po wpisaniu pierwszych słów + 1-Click Google CTA**
+   - Gdy użytkownik zacznie pisać (np. wpisze min. 15–20 znaków lub kliknie odpowiedź na marginesie), tuż pod obszarem pisania (nad biurkiem ze zwierzakiem) płynnie pojawi się spokojny, ciepły pasek zachęcający do zachowania wpisu:
+     - Krótki komunikat: *„Twój pierwszy wpis jest gotowy do zapieczętowania. Załóż darmowe konto w 5 sekund, aby zachować ten dzień.”*
+     - Bezpośredni przycisk **„Zapisz wpis przez Google”** (1-click OAuth, który automatycznie przenosi napisany tekst do nowego konta) oraz przycisk **„Zamknij dzień i załóż konto”** (otwierający modal z wyborem Google lub e-maila).
+3. **Czystsza przestrzeń wokół kartki**
+   - Zwiększymy pionowy oddech (`padding` i `whitespace`) wokół pierwszej sekcji, usuwając zbędne dopiski techniczne, tak aby wzrok skupiał się wyłącznie na pytaniu dnia, pisaniu i towarzyszu.
 
 ---
 
-## 2. User Experience & Visual Design
+## 3. Odchudzenie dołu strony: z 7 sekcji do 3 czystych sekcji
 
-Projekt wizualny jest w pełni spójny z dotychczasowym kierunkiem artystycznym **Momenty** (ciepły papier `#F7F5F0`, głęboki atrament `#1C1A18`, lakowa czerwień `#8B2635`, pudrowy róż `#EBC5CF`, szeryfowa `Lora` oraz techniczny `JetBrains Mono`):
+Zamiast 7 rozbudowanych bloków zostawimy tylko **3 klarowne sekcje** o dużej ilości światła i krótkich, konkretnych opisach:
 
-- **Wskaźnik Sparkle obok Dziennika**:
-  - Gdy dzisiaj zamknięto dzień i licznik osiągnął wylosowany próg (1–4 dni), obok przycisku otwierającego **Dziennik** (zarówno na banerze zamkniętego dnia, jak i przy dolnym uchwycie Dziennika) pojawia się złocisto-różowy znaczek z animacją gwiazdek (`Sparkles`) oraz napisem *„Czeka na Ciebie Sparkle”*.
-- **Modal i Karta Docenienia (Sparkle)**:
-  - Kliknięcie w gwiazdki otwiera kartę stylizowaną na odręczny list / notatkę na ciepłym kremowym papierze z delikatnym złotym i różowym akcentem (`#D4AF37` / `#EBC5CF`).
-  - Nagłówek zawiera zakres dat ostatnich wpisów oraz bezpośredni zwrot, a pod treścią wyróżnione są 2–3 kluczowe momenty, za które warto siebie docenić.
-  - W widoku archiwum **Dziennika** zapisane podsumowania wyświetlają się na osi czasu jako wyróżnione **Karty Docenienia** (z ikoną gwiazdek i odznaką *„Karta docenienia”*).
-- **Modal tworzenia jednorazowego linku (po zamknięciu dnia)**:
-  - Dostępny z poziomu ekranu zamkniętego dzisiejszego dnia obok przycisku podglądu wpisu.
-  - Pozwala jednym kliknięciem wybrać język odbiorcy (`Polski`, `English`, `Español`, `Français`), wyświetla wygenerowany 4-cyfrowy kod PIN (z opcją zmiany) i generuje jednorazowy link (`?share=<id>`).
-  - Zawiera dwa wygodne przyciski: **„Kopiuj sam link”** oraz **„Kopiuj link z kodem PIN”**, a także ostrzeżenie, że po pierwszym odczytaniu przez odbiorcę wiadomość zniknie na zawsze.
-- **Ekran odbiorcy jednorazowej wiadomości (`?share=<id>`)**:
-  - Otwarcie linku prezentuje minimalistyczny ekran z pieczęcią lakową i 4-polowym wejściem na kod PIN.
-  - Po wpisaniu poprawnego PIN-u pieczęć się otwiera, wiadomość zostaje odszyfrowana w przeglądarce i wyświetlona w wybranym języku wraz z informacją *„Wiadomość jednorazowa — po zamknięciu lub odświeżeniu tej karty treść bezpowrotnie wygaśnie”*.
-  - Przy próbie odświeżenia strony lub ponownego użycia linku wyświetlana jest karta *„Ta wiadomość została już odczytana i uległa zaszyfrowaniu”*.
+### Sekcja 01 · Jak to działa (`Cztery chwile codziennego rytuału.`)
+- **Co zostaje**: To jedyna sekcja z interaktywnym przełącznikiem 4 kroków (`01. Margines`, `02. Maszyna`, `03. Zamknięty dzień`, `04. Dziennik`).
+- **Uproszczenie wizualne**:
+  - Nagłówek w jednej linii z wiszącą żarówką po prawej stronie oraz ikonką otwartego dziennika przed `01 · Jak to działa`.
+  - Prawa karta podglądu ma zawsze dokładnie taką samą wysokość jak 4 kroki po lewej stronie (`items-stretch` + `h-full`), a aktywne zakładki i akcenty przyjmują kolor wybranego zwierzaka (domyślnie kolor lisa `#C96839`).
+  - Krótsze, jednozdaniowe opisy każdego z 4 kroków po lewej stronie, bez ścian tekstu.
 
----
+### Sekcja 02 · Prywatność E2EE (`Twoje myśli należą wyłącznie do Ciebie.`)
+- **Zamiast wieloetapowego symulatora szyfrowania**: Czysta, statyczna wizualizacja w układzie 2-kolumnowym (lub przejrzystym Bento):
+  - **Po lewej**: Zwięzłe wyjaśnienie w 2 zdaniach, że każdy wpis jest szyfrowany kluczem **AES-256-GCM** bezpośrednio w przeglądarce przed wysłaniem do chmury.
+  - **Po prawej**: Elegancka, statyczna karta porównawcza *„Na Twoim urządzeniu (czytelny wpis)”* vs *„W bazie danych (zaszyfrowany szyfrogram)”* — bez przeklikiwania zakładek i bez nadmiaru technicznego żargonu.
 
-## 3. Key Product Decisions & Trade-Offs
-
-- **Model AI dla Sparkle i tłumaczenia (`gemini-3.1-flash-lite`)**:
-  - Wykorzystujemy szybki, bardzo ekonomiczny model `gemini-3.1-flash-lite` (z kaskadowym fallbackiem do `gemini-3.8-flash` skonfigurowanym na serwerze). Zapewnia on niskie opóźnienie, znikomy koszt oraz naturalny, empatyczny styl wypowiedzi w języku użytkownika.
-- **Szyfrowanie PIN-em po stronie klienta + atomowe spalenie na serwerze**:
-  - Nawet zanim wiadomość trafi do bazy tymczasowej, jest szyfrowana kluczem wyprowadzonym z PIN-u (`PBKDF2` + `AES-GCM`). Dodatkowo dołączany jest skrót weryfikacyjny PIN-u (`SHA-256`), dzięki czemu błędnie wpisany PIN nie niszczy wiadomości (odbiorca może poprawić literówkę do 5 prób), natomiast pierwsze poprawne podanie PIN-u zwraca szyfrogram i **w tej samej operacji atomowo usuwa go z serwera i bazy**.
-- **Dostępność dla odbiorców bez konta**:
-  - Odbiorca jednorazowego linku nie musi zakładać konta ani logować się do aplikacji — dedykowany endpoint serwerowy obsługuje weryfikację PIN-u i jednorazowe wydanie zaszyfrowanego ładunku dla każdego, kto posiada link i kod PIN.
+### Sekcja 03 · Telefon, Gwiazdki i Rytuał w kieszeni (`Zawsze pod ręką, gdy kończy się dzień.`)
+- **Połączenie najważniejszych korzyści w jedną lekką, statyczną sekcję**:
+  - Zamiast osobnych, ciężkich sekcji o ciepłym spojrzeniu (`03`), dzieleniu się (`04`), wykresach (`05`) i instalacji PWA (`06`), pokażemy **3 czyste karty wizualne w jednym rzędzie**:
+    1. **Telefon i aplikacja PWA**: Widok czystej kartki na telefonie — dodaj do ekranu głównego i pisz lub dyktuj głosem przed snem.
+    2. **Gwiazdki i ciche podsumowania**: Po zamknięciu kilku dni zwierzak podkreśla ważne chwile i pomaga dostrzec to, co dobre, bez oceniania.
+    3. **Listy i statystyki rytmu**: Możliwość wydrukowania lub wysłania bliskiej osobie jednego wybranego wspomnienia w formie papierowego listu oraz spokojny kalendarz Twojej regularności.
 
 ---
 
-## 4. Technical Architecture & Data Strategy
+## 4. Domknięcie strony (Finalny CTA do rejestracji)
+- Pod sekcją `03` dodamy spokojne, wyśrodkowane domknięcie w stylu **heykarrot.com**:
+  - Ilustracja wybranego zwierzaka (domyślnie Lis) + nagłówek: *„Gotowy na pierwszy spokojny wieczór z dziennikiem?”*
+  - Główny przycisk w kolorze zwierzaka: **„Załóż darmowe konto i zachowaj dzisiejszy wpis”** + bezpośredni przycisk **„Kontynuuj z Google”**.
 
-### Przepływ komponentów i architektura systemu
+---
 
-```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                        EKRAN ZAMKNIĘTEGO DNIA (Klient)                       │
-├──────────────────────────────────────┬───────────────────────────────────────┤
-│ 1. Gwiazdki Sparkle (1–4 dni)        │ 2. Jednorazowe Udostępnianie + PIN    │
-│  ├─ Losowy licznik (1..4 zamknięcia) │  ├─ Wybór języka docelowego           │
-│  ├─ Przycisk ✨ obok "Dziennik"      │  ├─ Generowanie 4-cyfrowego PIN-u     │
-│  └─ Kliknięcie → żądanie podsumowania│  └─ Szyfrowanie AES-GCM (klucz z PIN) │
-└──────────────────┬───────────────────┴───────────────────┬───────────────────┘
-                   │                                       │
-                   ▼                                       ▼
-┌──────────────────────────────────────┐ ┌─────────────────────────────────────┐
-│   POST /api/sparkle-summary          │ │  POST /api/translate-share          │
-│   (gemini-3.1-flash-lite)            │ │  POST /api/shares                   │
-│  ├─ Analiza wpisów z ostatnich dni   │ │  POST /api/shares/:id/consume       │
-│  └─ Ton: "Hej stary, dobrze zrobiłeś"│ │  └─ Atomowe wydanie + spalenie      │
-└──────────────────┬───────────────────┘ └─────────────────┬───────────────────┘
-                   │                                       │
-                   ▼                                       ▼
-┌──────────────────────────────────────┐ ┌─────────────────────────────────────┐
-│      DZIENNIK (Karta Docenienia)     │ │    WIDOK ODBIORCY (?share=<id>)     │
-│  ├─ Zapis w kolekcji użytkownika     │ │  ├─ Ekran wprowadzania kodu PIN     │
-│  │  oraz pamięci lokalnej            │ │  ├─ Odszyfrowanie AES-GCM w pamięci │
-│  └─ Wyświetlanie między wpisami      │ │  └─ Odświeżenie = Dostęp zablokowany│
-└──────────────────────────────────────┘ └─────────────────────────────────────┘
-```
-
-### Modele danych
-
-1. **Karta Docenienia Sparkle (`SparkleSummary`)**:
-   - `id`: unikalny identyfikator karty
-   - `date`: data wygenerowania (`YYYY-MM-DD`)
-   - `createdAt`: znacznik czasu utworzenia
-   - `periodLabel`: zakres dat podsumowanych wpisów
-   - `greeting`: bezpośredni zwrot otwierający
-   - `content`: główne kumplowskie podsumowanie (zaszyfrowane w chmurze kluczem użytkownika, analogicznie do wpisów)
-   - `highlights`: lista 2–3 konkretnych rzeczy, które użytkownik zrobił dobrze
-
-2. **Stan licznika Sparkle (`SparkleState`)**:
-   - `sealedDaysSinceLastSparkle`: liczba zamkniętych dni od ostatniego podsumowania
-   - `targetDaysForNextSparkle`: wylosowana liczba dni w przedziale `1..4`
-   - `hasPendingSparkle`: flaga informująca, że gwiazdki czekają na kliknięcie obok Dziennika
-   - `lastTriggeredDate`: data ostatniego wyzwolenia gwiazdek
-
-3. **Jednorazowa Zaszyfrowana Wiadomość (`OneTimeShare`)**:
-   - `shareId`: losowy, nieodgadnionym identyfikator linku (128-bit hex)
-   - `encryptedPayload`: zaszyfrowana algorytmem AES-GCM treść wiadomości oraz pytania dnia (w wybranym języku docelowym)
-   - `iv` oraz `salt`: parametry kryptograficzne dla `PBKDF2` + `AES-GCM`
-   - `pinVerifierHash`: skrót kryptograficzny z `PIN + salt` pozwalający serwerowi zweryfikować poprawność PIN-u przed atomowym skasowaniem ładunku
-   - `targetLang`: język docelowy (`pl`, `en`, `es`, `fr`)
-   - `failedAttempts`: licznik błędnych prób PIN (blokada i usunięcie po 5 nieudanych próbach)
-   - `burned`: flaga oznaczająca, że wiadomość została już odczytana, a jej szyfrogram bezpowrotnie wyczyszczony (`encryptedPayload = null`)
+## 5. Zakres plików do modyfikacji po zatwierdzeniu planu
+- `src/components/LandingPage.tsx`:
+  - Dodanie delikatnego paska konwersji PLG po rozpoczęciu pisania (z bezpośrednim logowaniem Google 1-click oraz przeniesieniem wpisanego tekstu do konta).
+  - Usunięcie rozbudowanych symulatorów z sekcji `02`, `03`, `04`, `05`, `06`, `07` i zastąpienie ich dwiema czystymi, statycznymi sekcjami (`02 · Prywatność E2EE` oraz `03 · W kieszeni i na co dzień`) + końcowym blokiem CTA.
+  - Zachowanie pełnego wsparcia językowego (`PL` / `EN` wykrywanego automatycznie z przeglądarki i systemu) dla nowej, odchudzonej struktury.

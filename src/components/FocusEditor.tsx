@@ -2403,12 +2403,12 @@ export const FocusEditor: React.FC<FocusEditorProps> = ({
           }}
           className="sticky z-30 w-full bg-[#F7F5F0]/95 backdrop-blur-[2px] border-b border-[#EAE5DA]/85 select-none will-change-transform"
         >
-          <div className="max-w-2xl mx-auto w-full px-3 sm:px-8 pt-2.5 sm:pt-5 pb-2.5 space-y-2 sm:space-y-3">
+          <div className="max-w-2xl mx-auto w-full px-4 sm:px-8 pt-5 md:pt-6 pb-4 space-y-3.5">
             {/* Main Question OR Free Thought Header */}
-            <div className="w-full select-none shrink-0">
+            <div className="w-full select-none shrink-0 py-0.5">
               {isFreeThoughtMode ? (
-                <div className="flex flex-wrap items-center justify-between gap-2 py-0.5">
-                  <div className="inline-flex items-center gap-2 text-base sm:text-xl font-serif-literary italic text-[#6E6961]">
+                <div className="flex flex-wrap items-center justify-between gap-2 py-1">
+                  <div className="inline-flex items-center gap-2.5 text-[18px] sm:text-xl font-serif-literary italic text-[#524D46]">
                     <svg
                       viewBox="0 0 18 18"
                       className="w-4 h-4 shrink-0 text-[#8B2635]"
@@ -2433,7 +2433,10 @@ export const FocusEditor: React.FC<FocusEditorProps> = ({
                   </div>
                 </div>
               ) : (
-                <h2 className="w-full text-[17px] sm:text-2xl md:text-[26px] font-serif-literary font-normal leading-snug text-left text-[#6E6961] transition-colors">
+                <h2
+                  className="w-full text-[19.5px] sm:text-[22px] md:text-[24px] font-serif-literary font-normal leading-[1.4] sm:leading-snug text-left text-[#524D46] transition-colors"
+                  style={{ textWrap: 'balance' }}
+                >
                   {activePromptText}
                 </h2>
               )}
@@ -2441,7 +2444,7 @@ export const FocusEditor: React.FC<FocusEditorProps> = ({
 
             {/* Combined Action Row + Live Dictation Preview + Mobile Follow-up Question */}
             {!isLoadingEntry && (
-              <div className="w-full space-y-2 select-none">
+              <div className="w-full space-y-3 select-none">
                 <div className="w-full flex flex-nowrap items-center justify-between gap-2 min-w-0">
                   {/* Left side of toolbar: Voice Dictation (Mobile + Desktop), B/I markup, + Spellcheck button */}
                   <div className="flex flex-nowrap items-center gap-1.5 text-[11px] sm:text-xs font-mono-meta shrink-0">
@@ -2805,9 +2808,9 @@ export const FocusEditor: React.FC<FocusEditorProps> = ({
                 )}
 
                 {/* Mobile & Tablet Follow-up Question (pytanie pomocnicze) inside pinned top bar */}
-                <div className="lg:hidden pt-0.5">
+                <div className="lg:hidden pt-1">
                   {showMarginHints ? (
-                    <div className="border border-[#E2DDD3] bg-[#EFECE4]/75 rounded px-2.5 py-1 flex items-center justify-between gap-2">
+                    <div className="border border-[#E2DDD3] bg-[#EFECE4]/75 rounded px-3 py-1.5 flex items-center justify-between gap-2.5">
                       <span className="text-[13.5px] sm:text-[15px] font-serif-literary italic text-[#3D3831] leading-snug flex-1 text-left">
                         {currentMarginQuestion}
                       </span>
@@ -2905,7 +2908,7 @@ export const FocusEditor: React.FC<FocusEditorProps> = ({
         >
           <div
             className={`max-w-2xl mx-auto w-full px-4 sm:px-8 pb-4 ${
-              isSealed && !isDrawerOpen ? 'flex-1 min-h-0 flex flex-col' : 'pt-3 sm:pt-4 space-y-3.5'
+              isSealed && !isDrawerOpen ? 'flex-1 min-h-0 flex flex-col' : 'pt-4 sm:pt-5 space-y-4'
             }`}
           >
             {/* Top Banner when Day is Sealed — symmetrical vertical padding from header and to main question */}

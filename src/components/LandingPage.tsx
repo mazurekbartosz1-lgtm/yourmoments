@@ -1765,15 +1765,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         {/* =====================================================================
             1. FIRST SCREEN: ~3/4 SCREEN LOGGED-IN STYLE WRITING AREA (WITH FULL HEADER OF SECTION 01 VISIBLE BELOW)
            ===================================================================== */}
-        <section className="min-h-[68vh] sm:min-h-[70vh] flex flex-col justify-between w-full text-left relative pt-0 pb-3.5 sm:pb-4">
+        <section className="min-h-[68vh] sm:min-h-[70vh] flex flex-col justify-between w-full text-left relative pt-0 pb-4 sm:pb-5">
           {/* Pinned Top Dock: Daily Question + Action Toolbar + Mobile Follow-up Question */}
           <div className="w-full bg-[#F7F5F0]/95 border-b border-[#EAE5DA]/85 select-none">
-            <div className="max-w-2xl mx-auto w-full px-3 sm:px-8 pt-2.5 sm:pt-3.5 pb-2.5 space-y-2 sm:space-y-2.5">
+            <div className="max-w-2xl mx-auto w-full px-4 sm:px-8 pt-5 md:pt-6 pb-4 space-y-3.5">
               {/* Main Question OR Free Thought Header */}
-              <div className="w-full select-none shrink-0">
+              <div className="w-full select-none shrink-0 py-0.5">
                 {plgFreeThought ? (
-                  <div className="flex flex-wrap items-center justify-between gap-2 py-0.5">
-                    <div className="inline-flex items-center gap-2 text-base sm:text-xl font-serif-literary italic text-[#6E6961]">
+                  <div className="flex flex-wrap items-center justify-between gap-2 py-1">
+                    <div className="inline-flex items-center gap-2.5 text-[18px] sm:text-xl font-serif-literary italic text-[#524D46]">
                       <svg
                         viewBox="0 0 18 18"
                         className="w-4 h-4 shrink-0 text-[#8B2635]"
@@ -1798,14 +1798,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     </div>
                   </div>
                 ) : (
-                  <h1 className="w-full text-[17px] sm:text-2xl md:text-[25px] font-serif-literary font-normal leading-snug text-left text-[#6E6961] transition-colors">
+                  <h1
+                    className="w-full text-[19.5px] sm:text-[22px] md:text-[24px] font-serif-literary font-normal leading-[1.4] sm:leading-snug text-left text-[#524D46] transition-colors"
+                    style={{ textWrap: 'balance' }}
+                  >
                     {getPromptText(activeHeroPrompt, lang)}
                   </h1>
                 )}
               </div>
 
               {/* Action Row: Dyktuj + [< | Wymień (3/3) | >] + Wolna myśl */}
-              <div className="w-full space-y-2 select-none">
+              <div className="w-full space-y-3 select-none">
                 <div className="w-full flex flex-nowrap items-center justify-between gap-2 min-w-0">
                   {/* Left side: Dyktuj */}
                   <div className="flex flex-nowrap items-center gap-1.5 text-[11px] sm:text-xs font-mono-meta shrink-0">
@@ -1989,9 +1992,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 )}
 
                 {/* Mobile & Tablet Follow-up Question (pytanie pomocnicze) inside top dock */}
-                <div className="lg:hidden pt-0.5">
+                <div className="lg:hidden pt-1">
                   {plgShowMarginHints ? (
-                    <div className="border border-[#E2DDD3] bg-[#EFECE4]/75 rounded px-2.5 py-1 flex items-center justify-between gap-2">
+                    <div className="border border-[#E2DDD3] bg-[#EFECE4]/75 rounded px-3 py-1.5 flex items-center justify-between gap-2.5">
                       <span className="text-[13.5px] sm:text-[15px] font-serif-literary italic text-[#3D3831] leading-snug flex-1 text-left">
                         {currentPlgMarginQuestion}
                       </span>
@@ -2065,7 +2068,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
           {/* Centered Writing Area + Desktop Left Margin Question */}
           <div className="flex-1 flex flex-col w-full">
-            <div className="max-w-2xl mx-auto w-full px-4 sm:px-8 pt-2.5 sm:pt-3.5 pb-2 space-y-3 flex-1 flex flex-col">
+            <div className="max-w-2xl mx-auto w-full px-4 sm:px-8 pt-4 sm:pt-5 pb-2 space-y-3.5 flex-1 flex flex-col">
               {authError && (
                 <div className="p-3 rounded-lg bg-[#FDF2F2] border border-[#E8C5C5] text-xs font-mono-meta text-[#8B2635] flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0" />
@@ -2193,10 +2196,43 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
           </div>
 
-          {/* Bottom Section: Prominent Primary CTA "Zamknij dzień i załóż konto" + CompanionDesk + 2-line Footer */}
+          {/* Bottom Section: Gentle PLG Save Banner + Prominent Primary CTA + CompanionDesk + Clean Footer */}
           <div className="w-full overflow-x-hidden flex flex-col items-center shrink-0 mt-1 pt-0.5">
-            {/* Prominent Centered Primary CTA Button in the active Animal Companion's color */}
-            <div className="max-w-2xl mx-auto w-full px-2.5 sm:px-8 flex flex-col items-center pb-2.5 select-none">
+            {/* Gentle PLG Save Banner after typing + Primary CTA Button */}
+            <div className="max-w-2xl mx-auto w-full px-2.5 sm:px-8 flex flex-col items-center pb-2.5 select-none space-y-2.5">
+              {plgDraft.trim().length >= 8 && !onReturnToEditor && (
+                <div className="w-full rounded-xl bg-[#FAF8F5] border border-[#DDD6C8] px-3.5 py-2.5 sm:px-4 sm:py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-2xs animate-in fade-in slide-in-from-bottom-1 duration-200">
+                  <div className="flex items-center gap-2 text-left">
+                    <span className="w-2 h-2 rounded-full bg-[#2E6F40] shrink-0" />
+                    <span className="text-xs sm:text-sm font-serif-literary text-[#1C1A18]">
+                      {tr(
+                        'Twój wpis jest gotowy do zapieczętowania. Zachowaj ten dzień na prywatnym koncie:',
+                        'Your reflection is ready to seal. Save today’s entry to your private account:',
+                        'Tu entrada está lista para sellarse. Guarda este día en tu cuenta privada:',
+                        'Votre pensée est prête. Enregistrez cette journée sur votre compte privé :'
+                      )}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      persistPlgDraft(plgDraft, activeHeroPrompt.id, plgWritingSeconds);
+                      onGoogleLogin();
+                    }}
+                    disabled={isAuthLoading}
+                    className={`px-3.5 py-1.5 rounded-lg ${companionCta.activePillClass} text-xs font-mono-meta font-medium inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-colors disabled:opacity-60`}
+                  >
+                    <Lock className="w-3.5 h-3.5" />
+                    <span>
+                      {isAuthLoading
+                        ? tr('Łączenie...', 'Connecting...', 'Conectando...', 'Connexion...')
+                        : tr('Zapisz przez Google (1-klik)', 'Save with Google (1-click)', 'Guardar con Google', 'Enregistrer avec Google')}
+                    </span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+
               <button
                 type="button"
                 onClick={handleSaveEntryTrigger}
@@ -2278,37 +2314,23 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   )}
                 </div>
 
-                {/* Line 2: Quick Tabs matching FocusEditor (Stars icon -> appreciation-section, Dziennik, Statystyki, Klucz, Share icon -> share-section) */}
-                <div className="w-full flex flex-wrap items-center justify-center gap-1.5 sm:gap-2.5 text-[11px] sm:text-xs">
-                  <button
-                    type="button"
-                    onClick={() => scrollToSection('appreciation-section')}
-                    aria-label={tr('Karta docenienia', 'Appreciation card', 'Tarjeta de aprecio', 'Carte d’appréciation')}
-                    title={tr(
-                      'Przejdź do sekcji: Ciepłe spojrzenie na ostatnie dni',
-                      'Go to section: Warm reflection on recent days',
-                      'Ir a la sección: Mirada cálida a tus últimos días',
-                      'Aller à la section : Regard chaleureux sur vos derniers jours'
-                    )}
-                    className="relative flex items-center justify-center px-2 py-1 rounded border border-[#DDD6C8] bg-[#F5F2EB] hover:bg-[#EAE5DA] text-[#8B2635] cursor-pointer transition-colors shrink-0"
-                  >
-                    <Sparkles className="w-3.5 h-3.5 text-[#8B2635]" />
-                  </button>
-
+                {/* Line 2: Clean 3-Section Quick Links */}
+                <div className="w-full flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs">
                   <button
                     type="button"
                     onClick={() => scrollToSection('flow-section')}
                     className="px-2.5 py-1 rounded border border-[#DDD6C8] bg-[#F5F2EB] hover:bg-[#EAE5DA] text-[#524D46] hover:text-[#1C1A18] transition-colors cursor-pointer shrink-0"
                   >
-                    {tr('Dziennik', 'Journal', 'Diario', 'Journal')}
+                    {tr('01 · Rytuał', '01 · Ritual', '01 · Ritual', '01 · Rituel')}
                   </button>
 
                   <button
                     type="button"
-                    onClick={() => scrollToSection('stats-section')}
-                    className="px-2.5 py-1 rounded border border-[#DDD6C8] bg-[#F5F2EB] hover:bg-[#EAE5DA] text-[#524D46] hover:text-[#1C1A18] transition-colors cursor-pointer shrink-0"
+                    onClick={() => scrollToSection('mobile-section')}
+                    className="px-2.5 py-1 rounded border border-[#DDD6C8] bg-[#F5F2EB] hover:bg-[#EAE5DA] text-[#524D46] hover:text-[#1C1A18] transition-colors cursor-pointer shrink-0 inline-flex items-center gap-1"
                   >
-                    {tr('Statystyki pisania', 'Writing stats', 'Estadísticas', 'Statistiques')}
+                    <Sparkles className="w-3 h-3 text-[#8B2635]" />
+                    <span>{tr('02 · Telefon i Gwiazdki', '02 · Mobile & Stars', '02 · Móvil y Estrellas', '02 · Mobile et Étoiles')}</span>
                   </button>
 
                   <button
@@ -2316,22 +2338,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     onClick={() => scrollToSection('security-section')}
                     className="px-2.5 py-1 rounded border border-[#DDD6C8] bg-[#F5F2EB] hover:bg-[#EAE5DA] text-[#524D46] hover:text-[#1C1A18] transition-colors cursor-pointer shrink-0"
                   >
-                    {tr('Klucz', 'Key', 'Clave', 'Clé')}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => scrollToSection('share-section')}
-                    aria-label={tr('Dzielenie się myślą', 'Share a moment', 'Compartir', 'Partager')}
-                    title={tr(
-                      'Przejdź do sekcji: Dzielenie się z bliskimi (jednorazowy link z PIN-em)',
-                      'Go to section: Sharing with loved ones (one-time PIN link)',
-                      'Ir a la sección: Compartir con los tuyos',
-                      'Aller à la section : Partager avec vos proches'
-                    )}
-                    className="relative flex items-center justify-center px-2 py-1 rounded border border-[#DDD6C8] bg-[#F5F2EB] hover:bg-[#EAE5DA] text-[#2E5C33] cursor-pointer transition-colors shrink-0"
-                  >
-                    <Share2 className="w-3.5 h-3.5 text-[#2E5C33]" />
+                    {tr('03 · Prywatność E2EE', '03 · E2EE Privacy', '03 · Privacidad E2EE', '03 · Confidentialité E2EE')}
                   </button>
                 </div>
               </div>
@@ -2448,43 +2455,43 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     titleEs: 'Pregunta del Día y margen silencioso',
                     titleFr: 'Question du jour et marge discrète',
                     descPl:
-                      'Na wysokości Twojego kursora pojawia się dyskretne pytanie pomocnicze, które możesz jednym kliknięciem wkleić do tekstu.',
+                      'Obok Twojego tekstu pojawia się subtelne pytanie pomocnicze, które wkleisz jednym kliknięciem.',
                     descEn:
-                      'A gentle follow-up question tracks your active cursor line in the margin — click once to copy it into your text.',
+                      'A quiet follow-up question appears beside your text — click once to weave it in.',
                     descEs:
-                      'Una pregunta de seguimiento acompaña la línea activa de tu cursor; haz clic para copiarla a tu texto.',
+                      'Una pregunta de seguimiento aparece junto a tu texto; haz clic para añadirla.',
                     descFr:
-                      'Une question de relance accompagne la ligne active de votre curseur — cliquez pour l’insérer dans votre texte.',
+                      'Une question de relance apparaît à côté de votre texte — cliquez pour l’insérer.',
                   },
                   {
                     num: '02.',
-                    titlePl: 'Pisanie i dyktowanie głosem w rytmie maszyny',
-                    titleEn: 'Writing & voice dictation to the typewriter rhythm',
-                    titleEs: 'Escritura y dictado por voz al ritmo de la máquina',
-                    titleFr: 'Écriture et dictée vocale au rythme de la machine',
+                    titlePl: 'Pisanie lub dyktowanie głosem',
+                    titleEn: 'Writing or voice dictation',
+                    titleEs: 'Escritura o dictado por voz',
+                    titleFr: 'Écriture ou dictée vocale',
                     descPl:
-                      'Pisz na klawiaturze lub dyktuj głosem — przyklejony pasek narzędzi (Dyktuj, B, I, Popraw pisownię) jest zawsze pod ręką, a towarzysz stuka w klawisze razem z Tobą.',
+                      'Pisz na klawiaturze albo mów swobodnie do mikrofonu, a Twój towarzysz stuka w maszynę razem z Tobą.',
                     descEn:
-                      'Type or dictate by voice — the sticky toolbar (Dictate, B, I, Spellcheck) stays visible as you scroll while your companion types along.',
+                      'Type on your keyboard or speak freely while your companion types along at the desk.',
                     descEs:
-                      'Escribe o dicta por voz: la barra fija (Dictar, B, I, Ortografía) te acompaña al bajar mientras tu compañero teclea contigo.',
+                      'Escribe en el teclado o habla libremente mientras tu compañero teclea contigo.',
                     descFr:
-                      'Écrivez ou dictez à la voix — la barre fixe (Dicter, B, I, Orthographe) reste visible pendant que votre compagnon tape avec vous.',
+                      'Écrivez au clavier ou parlez librement pendant que votre compagnon tape avec vous.',
                   },
                   {
                     num: '03.',
-                    titlePl: 'Zamknięcie i swobodne odblokowanie dnia',
-                    titleEn: 'Sealing & unlocking the day anytime',
-                    titleEs: 'Cerrar y desbloquear el día cuando quieras',
-                    titleFr: 'Clore et déverrouiller la journée à tout moment',
+                    titlePl: 'Zamknięcie i odblokowanie dnia',
+                    titleEn: 'Sealing & unlocking the day',
+                    titleEs: 'Cerrar y desbloquear el día',
+                    titleFr: 'Clore et déverrouiller la journée',
                     descPl:
-                      'Po zamknięciu dnia atrament jaśnieje, a zwierzak czyta książkę. Jeśli przypomni Ci się kolejna myśl, jednym kliknięciem odblokujesz wpis i wrócisz na dół kartki.',
+                      'Po zamknięciu dnia atrament jaśnieje, a w razie nowej myśli odblokujesz wpis jednym kliknięciem.',
                     descEn:
-                      'When sealed, the ink softens and your companion reads a book. If a new thought appears, unlock the entry with one click to resume right at the end.',
+                      'When sealed, the ink softens — and if a new thought appears, unlock it with a single click.',
                     descEs:
-                      'Al cerrar el día, la tinta se suaviza y tu compañero lee. Si recuerdas algo más, desbloquea la entrada con un clic para seguir al final.',
+                      'Al cerrar el día, la tinta se suaviza y puedes desbloquearla con un solo clic.',
                     descFr:
-                      'Une fois la journée close, l’encre s’adoucit. Si une pensée vous revient, déverrouillez l’entrée d’un clic pour reprendre tout en bas.',
+                      'Une fois la journée close, l’encre s’adoucit et reste déverrouillable en un clic.',
                   },
                   {
                     num: '04.',
@@ -2493,13 +2500,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     titleEs: 'Diario cifrado',
                     titleFr: 'Journal chiffré',
                     descPl:
-                      'Kalendarz z zakreślonymi dniami wysuwa się spod biurka, a towarzysz pomaga szukać zapisków z lupą.',
+                      'Kalendarz z zakreślonymi dniami wysuwa się spod biurka, byś mógł spokojnie wracać do wspomnień.',
                     descEn:
-                      'A monthly calendar slides out from beneath the desk while your companion searches with a magnifying glass.',
+                      'A monthly calendar slides out from beneath the desk so you can revisit every saved memory.',
                     descEs:
-                      'El calendario mensual se desliza desde abajo mientras tu compañero busca con su lupa.',
+                      'El calendario mensual se desliza bajo el escritorio para volver a tus recuerdos.',
                     descFr:
-                      'Un calendrier mensuel glisse sous le bureau tandis que votre compagnon cherche vos notes à la loupe.',
+                      'Un calendrier mensuel glisse sous le bureau pour retrouver chacun de vos souvenirs.',
                   },
                 ].map((step, index) => {
                   const isCurrent = activeStep === index;
@@ -2880,1633 +2887,373 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
         </section>
 
-        {/* 3. SMART PROMPTS & SOCRATIC MARGIN HINTS */}
-        <section id="hints-section" className="border-t border-[#E5DFD3] bg-[#F3EFE7]/55 py-16 md:py-24">
-          <div className="max-w-6xl mx-auto px-6">
-            <div className="max-w-xl space-y-2 mb-10">
-              <div className="inline-flex items-center gap-2 text-xs font-mono-meta text-[#7A756D]">
-                {/* Hand-drawn Fountain Pen Nib & Margin Icon */}
-                <svg
-                  viewBox="0 0 24 20"
-                  className="w-5 h-4 shrink-0 overflow-visible"
-                  aria-hidden="true"
-                >
-                  <line x1="3" y1="2" x2="3" y2="18" stroke="#8B2635" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="2.5 2.5" />
-                  <path
-                    d="M20 2 C15 2 10 6 8 13 L7 17 L11 16 C18 14 22 9 20 2 Z"
-                    fill="#EBC5CF"
-                    stroke="#1C1A18"
-                    strokeWidth="1.5"
-                    strokeLinejoin="round"
-                  />
-                  <line x1="7" y1="17" x2="14.5" y2="9.5" stroke="#1C1A18" strokeWidth="1.3" strokeLinecap="round" />
-                </svg>
+        {/* =====================================================================
+            02 · MOBILE, STARS & SHARING — 3 CLEAN STATIC CARDS
+           ===================================================================== */}
+        <section id="mobile-section" className="border-t border-[#E5DFD3] bg-[#FAF8F5] py-16 md:py-24">
+          <div className="max-w-6xl mx-auto px-6 space-y-10">
+            <div className="max-w-2xl space-y-2.5">
+              <div className="inline-flex items-center gap-2 text-xs font-mono-meta text-[#8B2635]">
+                <Sparkles className="w-4 h-4 shrink-0" />
                 <span>
                   {tr(
-                    '02 · Pytania i Margines',
-                    '02 · Prompts & Margin',
-                    '02 · Preguntas y Margen',
-                    '02 · Questions et Marge'
+                    '02 · W kieszeni i na co dzień',
+                    '02 · In your pocket & every day',
+                    '02 · En tu bolsillo y cada día',
+                    '02 · Dans votre poche et au quotidien'
                   )}
                 </span>
               </div>
+
               <h2
                 className="text-3xl sm:text-4xl font-serif-literary text-[#1C1A18] leading-tight"
                 style={{ textWrap: 'balance' }}
               >
                 {tr(
-                  'Pytania zamiast pustej kartki.',
-                  'Questions instead of a blank page.',
-                  'Preguntas en lugar de una hoja en blanco.',
-                  'Des questions plutôt qu’une page blanche.'
+                  'Spokojny rytuał, który dopasowuje się do Twojego wieczoru.',
+                  'A calm ritual that fits naturally into your evening.',
+                  'Un ritual sereno que se adapta de forma natural a tu noche.',
+                  'Un rituel apaisé qui s’adapte naturellement à votre soirée.'
                 )}
               </h2>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
-              {/* Left: 5 Categories Explorer */}
-              <div className="lg:col-span-6 bg-[#FAF8F5] border border-[#E5DFD3] rounded-xl p-6 sm:p-8 flex flex-col justify-between space-y-5">
-                <div className="flex flex-wrap gap-1.5">
-                  {CATEGORIES.filter(
-                    (
-                      c
-                    ): c is {
-                      id: PromptCategory;
-                      labelPl: string;
-                      labelEn: string;
-                      labelEs: string;
-                      labelFr: string;
-                    } => c.id !== 'all'
-                  ).map(cat => {
-                    const active = selectedCategory === cat.id;
-                    return (
-                      <button
-                        key={cat.id}
-                        type="button"
-                        onClick={() => setSelectedCategory(cat.id)}
-                        className={`px-3 py-1.5 rounded-md text-xs font-mono-meta transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-                          active
-                            ? `${companionCta.activePillClass} font-medium`
-                            : 'bg-[#F2EFE8] text-[#524D46] hover:text-[#1C1A18] hover:bg-[#EAE5DA]'
-                        }`}
-                      >
-                        {tr(cat.labelPl, cat.labelEn, cat.labelEs, cat.labelFr)}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <div className="space-y-3 my-auto">
-                  {categoryPrompts.slice(0, 2).map(p => {
-                    const pSlug = getPromptSlug(p);
-                    return (
-                      <a
-                        key={p.id}
-                        href={`/prompts/${pSlug}`}
-                        onClick={e => handleSpaLink(e, `/prompts/${pSlug}`)}
-                        className="block p-4 rounded-lg bg-[#F7F5F0] hover:bg-[#EFECE4] border border-transparent hover:border-[#DDD6C8] transition-all space-y-1 group"
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="text-base font-serif-literary font-medium text-[#1C1A18] group-hover:text-[#8B2635] transition-colors">
-                            {getPromptText(p, lang)}
-                          </div>
-                          <ArrowRight className="w-3.5 h-3.5 text-[#7A756D] group-hover:text-[#1C1A18] shrink-0" />
-                        </div>
-                        <div className="text-xs font-serif-literary italic text-[#6E675F]">
-                          {getHintText(p, lang)}
-                        </div>
-                      </a>
-                    );
-                  })}
-                </div>
-
-                <div className="pt-2 border-t border-[#ECE7DC] flex items-center justify-between text-xs font-mono-meta">
-                  <span className="text-[#7A756D]">
-                    {tr('47 indeksowanych pytań refleksyjnych', '47 indexable reflection prompts', '47 preguntas de reflexión', '47 questions de réflexion')}
-                  </span>
-                  <a
-                    href="/prompts"
-                    onClick={e => handleSpaLink(e, '/prompts')}
-                    className="text-[#8B2635] hover:text-[#1C1A18] underline underline-offset-4 font-medium inline-flex items-center gap-1"
-                  >
-                    <BookOpen className="w-3.5 h-3.5" />
-                    <span>{tr('Otwórz bibliotekę /prompts →', 'Browse /prompts library →', 'Ver biblioteca /prompts →', 'Voir /prompts →')}</span>
-                  </a>
-                </div>
-              </div>
-
-              {/* Right: Interactive Socratic Margin Follow-up Demo */}
-              <div className="lg:col-span-6 bg-[#FAF8F5] border border-[#E5DFD3] rounded-xl p-6 sm:p-8 flex flex-col justify-between space-y-5">
-                <div className="text-xs font-mono-meta text-[#7A756D]">
-                  {tr(
-                    'Kliknij zdanie, aby zobaczyć podpowiedź na marginesie:',
-                    'Click a sentence to see the margin follow-up:',
-                    'Haz clic en una frase para ver la pista en el margen:',
-                    'Cliquez sur une phrase pour voir la piste en marge :'
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  {sampleThoughts.map((item, idx) => {
-                    const active = selectedSampleThoughtIdx === idx;
-                    return (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => setSelectedSampleThoughtIdx(idx)}
-                        className={`w-full text-left p-3 rounded-lg text-sm font-serif-literary transition-all cursor-pointer border-l-2 ${
-                          active
-                            ? `bg-[#F7F5F0] ${companionCta.activeBorderLClass} text-[#1C1A18] font-medium`
-                            : 'bg-[#F7F5F0]/50 border-l-transparent text-[#524D46] hover:bg-[#F7F5F0]'
-                        }`}
-                      >
-                        „{item.thought}”
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <div className="p-4 rounded-lg bg-[#F2EFE8] space-y-1.5 pl-4 border-l-2 border-l-[#EBC5CF]">
-                  {sampleThoughts[selectedSampleThoughtIdx].followUps.slice(0, 2).map((q, qIdx) => (
-                    <p
-                      key={qIdx}
-                      className="text-sm font-serif-literary italic font-bold text-[#1C1A18] leading-snug"
-                    >
-                      {q} →
-                    </p>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* =====================================================================
-            3A. SEPARATE BLOCK 1 AFTER HINTS: STARS APPRECIATION CARD (GRAFIKA GWIAZDEK)
-           ===================================================================== */}
-        <section
-          id="appreciation-section"
-          className="border-t border-[#E5DFD3] bg-[#F3EFE7]/55 py-16 md:py-24"
-        >
-          <div className="max-w-6xl mx-auto px-6">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
-              {/* Left Column: Explanation & Hand-Drawn Stars Graphic */}
-              <div className="lg:col-span-5 space-y-6">
-                <div className="space-y-3">
-                  <div className="inline-flex items-center gap-2.5 text-xs font-mono-meta text-[#8B2635]">
-                    {/* Hand-drawn 3-stars graphic */}
-                    <svg
-                      viewBox="0 0 44 24"
-                      className="w-9 h-5 shrink-0 overflow-visible"
-                      aria-hidden="true"
-                    >
-                      <path
-                        d="M12 2 L14.2 8.8 L21 11 L14.2 13.2 L12 20 L9.8 13.2 L3 11 L9.8 8.8 Z"
-                        fill="#EBC5CF"
-                        stroke="#1C1A18"
-                        strokeWidth="1.5"
-                        strokeLinejoin="round"
-                      />
-                      <path
-                        d="M31 2 L32.3 6.2 L36.5 7.5 L32.3 8.8 L31 13 L29.7 8.8 L25.5 7.5 L29.7 6.2 Z"
-                        fill="#FAF8F5"
-                        stroke="#1C1A18"
-                        strokeWidth="1.4"
-                        strokeLinejoin="round"
-                      />
-                      <circle cx="24" cy="18" r="2" fill="#8B2635" />
-                    </svg>
-                    <span>
-                      {tr(
-                        '03 · Ciepłe spojrzenie na ostatnie dni',
-                        '03 · Warm reflection on your recent days',
-                        '03 · Una mirada cálida a tus últimos días',
-                        '03 · Un regard chaleureux sur vos derniers jours'
-                      )}
+            {/* 3 Clean Visual Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
+              {/* Card 1: Mobile App & Voice Dictation */}
+              <div className="bg-[#F7F5F0] border border-[#E5DFD3] rounded-2xl p-6 flex flex-col justify-between space-y-5">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="w-9 h-9 rounded-xl bg-[#FAF8F5] border border-[#DDD6C8] flex items-center justify-center text-[#8B2635]">
+                      <Smartphone className="w-4 h-4" />
+                    </span>
+                    <span className="text-[11px] font-mono-meta text-[#7A756D]">
+                      iOS · Android · Web
                     </span>
                   </div>
 
-                  <h2
-                    className="text-3xl sm:text-4xl font-serif-literary text-[#1C1A18] leading-tight"
-                    style={{ textWrap: 'balance' }}
-                  >
-                    {tr(
-                      'Uważne docenienie Twoich ostatnich dni — bez oceniania i bez pośpiechu.',
-                      'A thoughtful appreciation of your recent days — without judgment or rush.',
-                      'Un reconocimiento cercano de tus últimos días — sin juicios ni prisas.',
-                      'Une appréciation attentive de vos derniers jours — sans jugement ni hâte.'
-                    )}
-                  </h2>
-
-                  <p className="text-base font-serif-literary text-[#524D46] leading-relaxed">
-                    {tr(
-                      'Co kilka zamkniętych dni obok przycisku Dziennika zapalają się małe gwiazdki. Kiedy w nie klikniesz, zobaczysz ciepłe, życzliwe podsumowanie, które dostrzega, gdzie odpuściłeś pośpiech, jak zadbałeś o spokój i dlaczego dobrze zrobiłeś.',
-                      'Every few sealed days, a small stars icon lights up next to your Journal button. Clicking it opens a warm, thoughtful summary noticing where you slowed down, how you protected your calm, and why you did well.',
-                      'Cada pocos días cerrados se iluminan unas pequeñas estrellas junto a tu Diario: un resumen cálido y cercano que destaca tus mejores decisiones recientes.',
-                      'Tous les quelques jours clôturés, de petites étoiles s’allument près de votre Journal : un résumé bienveillant qui souligne ce que vous avez bien fait.'
-                    )}
-                  </p>
-                </div>
-
-                {/* Illustrated Stars Badge & Calendar Integration */}
-                <div className="p-4 rounded-xl bg-[#FAF8F5] border border-[#E5DFD3] flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-2xl bg-[#F3EFE7] border border-[#DDD6C8] flex items-center justify-center shrink-0">
-                    <svg
-                      viewBox="0 0 48 48"
-                      className="w-10 h-10 overflow-visible"
-                      aria-hidden="true"
-                    >
-                      <circle cx="24" cy="24" r="19" fill="#FAF8F5" stroke="#DDD6C8" strokeWidth="1.2" strokeDasharray="3 3" />
-                      <path
-                        d="M21 8 L23.8 17.2 L33 20 L23.8 22.8 L21 32 L18.2 22.8 L9 20 L18.2 17.2 Z"
-                        fill="#EBC5CF"
-                        stroke="#1C1A18"
-                        strokeWidth="1.6"
-                        strokeLinejoin="round"
-                      />
-                      <path
-                        d="M35 24 L36.5 29 L41.5 30.5 L36.5 32 L35 37 L33.5 32 L28.5 30.5 L33.5 29 Z"
-                        fill="#FAF8F5"
-                        stroke="#1C1A18"
-                        strokeWidth="1.5"
-                        strokeLinejoin="round"
-                      />
-                      <circle cx="14" cy="34" r="2" fill="#8B2635" />
-                    </svg>
-                  </div>
-                  <div className="space-y-1 text-xs font-serif-literary text-[#524D46] leading-relaxed">
-                    <div className="font-mono-meta text-[11px] uppercase tracking-wider text-[#1C1A18] font-medium">
+                  <div className="space-y-1.5">
+                    <h3 className="text-xl font-serif-literary font-medium text-[#1C1A18]">
                       {tr(
-                        'Zapisane w Twoim kalendarzu (co 1–4 zamknięte dni)',
-                        'Saved in your calendar (every 1–4 sealed days)',
-                        'Guardado en tu calendario (cada 1–4 días cerrados)',
-                        'Enregistré dans votre calendrier (tous les 1–4 jours)'
+                        'Telefon i dyktowanie głosem',
+                        'Mobile app & voice dictation',
+                        'App móvil y dictado por voz',
+                        'Application mobile et dictée vocale'
                       )}
-                    </div>
-                    <p>
-                      {tr(
-                        'Każda karta docenienia jest szyfrowana kluczem AES-256 i przypinana do dnia w Dzienniku, abyś mógł do niej wrócić w dowolnej chwili.',
-                        'Every appreciation card is encrypted with your AES-256 key and pinned to the day in your Journal so you can revisit it anytime.',
-                        'Cada tarjeta de aprecio se cifra con tu clave AES-256 y queda guardada en el día correspondiente de tu Diario.',
-                        'Chaque carte d’appréciation est chiffrée en AES-256 et épinglée au jour correspondant dans votre Journal.'
-                      )}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Right Column: Interactive Stars Appreciation Card Preview */}
-              <div className="lg:col-span-7">
-                <div className="bg-[#FAF8F5] border border-[#E2DDD3] rounded-2xl p-6 sm:p-8 space-y-5 shadow-2xs">
-                  <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-[#ECE7DC]">
-                    <div className="inline-flex items-center gap-2.5">
-                      <span className="w-8 h-8 rounded-full bg-[#EBC5CF]/75 border border-[#1C1A18] flex items-center justify-center text-[#1C1A18]">
-                        <Sparkles className="w-4 h-4 text-[#8B2635]" />
-                      </span>
-                      <span className="text-xs font-mono-meta uppercase tracking-wider text-[#8B2635] font-medium">
-                        {tr(
-                          'Karta docenienia · Podgląd na żywo',
-                          'Appreciation Card · Live preview',
-                          'Tarjeta de aprecio · Vista previa',
-                          'Carte d’appréciation · Aperçu'
-                        )}
-                      </span>
-                    </div>
-
-                    <div className="inline-flex items-center gap-1 bg-[#EAE5DA] p-0.5 rounded-lg text-[11px] font-mono-meta">
-                      <button
-                        type="button"
-                        onClick={() => setDemoSparkleIdx(0)}
-                        className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
-                          demoSparkleIdx === 0
-                            ? companionCta.activePillClass
-                            : 'text-[#524D46] hover:text-[#1C1A18]'
-                        }`}
-                      >
-                        {tr('Przykład #1', 'Sample #1', 'Ejemplo #1', 'Exemple #1')}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setDemoSparkleIdx(1)}
-                        className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
-                          demoSparkleIdx === 1
-                            ? companionCta.activePillClass
-                            : 'text-[#524D46] hover:text-[#1C1A18]'
-                        }`}
-                      >
-                        {tr('Przykład #2', 'Sample #2', 'Ejemplo #2', 'Exemple #2')}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono-meta text-[#7A756D]">
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-[#F3EFE7] border border-[#E2DDD3] text-[#524D46]">
-                      <Calendar className="w-3 h-3 text-[#8B2635]" />
-                      <span>{activeDemoSparkle.periodLabel}</span>
-                    </span>
-                    <span className="inline-flex items-center gap-1 text-[#2E5C33]">
-                      <Sparkles className="w-3 h-3 text-[#8B2635]" />
-                      <span>
-                        {tr('Gwiazdki w kalendarzu', 'Stars in calendar', 'Estrellas en calendario', 'Étoiles au calendrier')}
-                      </span>
-                    </span>
-                  </div>
-
-                  <div className="space-y-2.5">
-                    <h3 className="text-xl sm:text-2xl font-serif-literary font-medium text-[#1C1A18] leading-snug">
-                      {activeDemoSparkle.greeting}
                     </h3>
-                    <p className="text-sm sm:text-base font-serif-literary text-[#33302B] leading-relaxed">
-                      {activeDemoSparkle.content}
+                    <p className="text-sm font-serif-literary text-[#524D46] leading-relaxed">
+                      {tr(
+                        'Dodaj Momenty do ekranu głównego w 5 sekund. Pisz na klawiaturze lub nagraj myśl głosem podczas wieczornego spaceru.',
+                        'Add Moments to your home screen in 5 seconds. Type or dictate your thoughts by voice during an evening walk.',
+                        'Añade Moments a tu pantalla de inicio en 5 segundos. Escribe o dicta tus pensamientos por voz.',
+                        'Ajoutez Moments à votre écran d’accueil en 5 secondes. Écrivez ou dictez vos pensées à la voix.'
+                      )}
                     </p>
                   </div>
-
-                  <div className="p-4 rounded-xl bg-[#F3EFE7]/85 border border-[#E2DDD3] space-y-2">
-                    <div className="text-[10px] font-mono-meta uppercase tracking-wider text-[#8B2635] flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5" />
-                      <span>
-                        {tr('Dlaczego to było dobre:', 'Why this mattered:', 'Por qué estuvo bien:', 'Pourquoi c’était précieux :')}
-                      </span>
-                    </div>
-                    <ul className="space-y-1.5">
-                      {activeDemoSparkle.highlights.map((h, i) => (
-                        <li
-                          key={i}
-                          className="flex items-start gap-2 text-xs sm:text-sm font-serif-literary text-[#1C1A18] leading-snug"
-                        >
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#8B2635] mt-1.5 shrink-0" />
-                          <span>{h}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <div className="pt-2 flex flex-wrap items-center justify-between gap-3 border-t border-[#EAE5DA]">
-                    <span className="text-[11px] font-mono-meta text-[#7A756D]">
-                      {tr(
-                        'Szyfrowane kluczem AES-256 i przypięte do dnia w Dzienniku',
-                        'AES-256 encrypted & pinned to the date in your Journal',
-                        'Cifrado con AES-256 y guardado en tu Diario',
-                        'Chiffré en AES-256 et épinglé dans votre Journal'
-                      )}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setShowDemoSparkleModal(true)}
-                      className="px-3.5 py-1.5 rounded border border-[#DDD6C8] bg-[#F5F2EB] hover:bg-[#EAE5DA] text-xs font-mono-meta text-[#1C1A18] inline-flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
-                    >
-                      <Sparkles className="w-3.5 h-3.5 text-[#8B2635]" />
-                      <span>{tr('Otwórz pełną kartę', 'Open full card', 'Abrir tarjeta', 'Ouvrir la carte')}</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* =====================================================================
-            3B. SEPARATE BLOCK 2 AFTER HINTS: ONE-TIME ENCRYPTED SHARE WITH LOVED ONES
-           ===================================================================== */}
-        <section
-          id="share-section"
-          className="border-t border-[#E5DFD3] bg-[#FAF8F5] py-16 md:py-24"
-        >
-          <div className="max-w-6xl mx-auto px-6">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
-              {/* Left Column: Explanation of One-Time Encrypted Sharing */}
-              <div className="lg:col-span-5 space-y-6">
-                <div className="space-y-3">
-                  <div className="inline-flex items-center gap-2 text-xs font-mono-meta text-[#2E5C33]">
-                    <Share2 className="w-4 h-4 text-[#2E5C33]" />
-                    <span>
-                      {tr(
-                        '04 · Dzielenie się z bliskimi',
-                        '04 · Sharing with loved ones',
-                        '04 · Compartir con los tuyos',
-                        '04 · Partager avec vos proches'
-                      )}
-                    </span>
-                  </div>
-
-                  <h2
-                    className="text-3xl sm:text-4xl font-serif-literary text-[#1C1A18] leading-tight"
-                    style={{ textWrap: 'balance' }}
-                  >
-                    {tr(
-                      'Podziel się wybranym momentem z bliską osobą — jednorazowo i z kodem PIN.',
-                      'Share a chosen moment with someone close — once and protected by a PIN.',
-                      'Comparte un momento elegido con alguien cercano — una sola vez y con PIN.',
-                      'Partagez un moment choisi avec un proche — une seule fois et protégé par PIN.'
-                    )}
-                  </h2>
-
-                  <p className="text-base font-serif-literary text-[#524D46] leading-relaxed">
-                    {tr(
-                      'Cały dziennik jest tylko dla Ciebie, ale czasem jeden zapisany moment dotyczy kogoś bliskiego. Wygeneruj zaszyfrowany, jednorazowy link chroniony 4-cyfrowym kodem PIN — opcjonalnie przetłumaczony na język odbiorcy (PL / EN / ES / FR). Po jednokrotnym przeczytaniu wiadomość ulega samozniszczeniu.',
-                      'Your journal is yours alone, yet sometimes a single moment is meant for someone close. Generate an encrypted, single-use link protected by a 4-digit PIN — optionally translated into the recipient’s language (PL / EN / ES / FR). Immediately after being read once, it self-destructs.',
-                      'Tu diario es solo para ti, pero a veces un momento está pensado para alguien cercano. Crea un enlace cifrado de un solo uso con PIN y traducción opcional que se autodestruye tras leerse una vez.',
-                      'Votre journal n’appartient qu’à vous, mais parfois une pensée est destinée à un proche. Créez un lien chiffré à usage unique protégé par PIN qui s’autodétruit dès la première lecture.'
-                    )}
-                  </p>
                 </div>
 
-                <div className="space-y-2 pt-3 border-t border-[#E5DFD3] text-xs font-mono-meta text-[#524D46]">
-                  <div>
-                    01.{' '}
-                    {tr(
-                      'Szyfrowanie w przeglądarce kluczem wyprowadzonym z kodu PIN',
-                      'Browser-side encryption derived from the 4-digit PIN',
-                      'Cifrado en el navegador derivado del código PIN',
-                      'Chiffrement dans le navigateur dérivé du code PIN'
-                    )}
-                  </div>
-                  <div>
-                    02.{' '}
-                    {tr(
-                      'Opcjonalne tłumaczenie wpisu w 1 kliknięcie (PL · EN · ES · FR)',
-                      'Optional 1-click translation (PL · EN · ES · FR)',
-                      'Traducción opcional en 1 clic (PL · EN · ES · FR)',
-                      'Traduction optionnelle en 1 clic (PL · EN · ES · FR)'
-                    )}
-                  </div>
-                  <div>
-                    03.{' '}
-                    {tr(
-                      'Automatyczne i trwałe usunięcie z serwera po pierwszym odczycie',
-                      'Automatic & permanent server deletion after first read',
-                      'Eliminación automática y permanente tras la primera lectura',
-                      'Suppression automatique et définitive après la première lecture'
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Right Column: Interactive 4-Step Simulator */}
-              <div className="lg:col-span-7">
-                <div className="bg-[#F7F5F0] border border-[#E2DDD3] rounded-2xl p-6 sm:p-8 space-y-6 shadow-2xs">
-                  <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[#E5DFD3]">
-                    <div className="inline-flex items-center gap-2">
-                      <span className="w-7 h-7 rounded-full bg-[#EBF2EB] border border-[#1C1A18] flex items-center justify-center text-[#2E5C33]">
-                        <Share2 className="w-3.5 h-3.5 text-[#2E5C33]" />
-                      </span>
-                      <span className="text-xs font-mono-meta uppercase tracking-wider text-[#2E5C33] font-medium">
-                        {tr(
-                          'Jednorazowy link · 4-cyfrowy PIN · 4 języki',
-                          'One-time link · 4-digit PIN · 4 languages',
-                          'Enlace único · PIN de 4 dígitos · 4 idiomas',
-                          'Lien unique · PIN à 4 chiffres · 4 langues'
-                        )}
-                      </span>
-                    </div>
-
-                    {/* Interactive Step Switcher */}
-                    <div className="inline-flex items-center gap-1 bg-[#EAE5DA] p-0.5 rounded-lg text-[11px] font-mono-meta">
-                      <button
-                        type="button"
-                        onClick={() => setDemoShareStep('create')}
-                        className={`px-2 py-1 rounded-md transition-colors cursor-pointer ${
-                          demoShareStep === 'create'
-                            ? companionCta.activePillClass
-                            : 'text-[#524D46] hover:text-[#1C1A18]'
-                        }`}
-                      >
-                        {tr('1. Wyślij', '1. Send', '1. Enviar', '1. Envoyer')}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setDemoShareStep('recipient_pin')}
-                        className={`px-2 py-1 rounded-md transition-colors cursor-pointer ${
-                          demoShareStep === 'recipient_pin'
-                            ? companionCta.activePillClass
-                            : 'text-[#524D46] hover:text-[#1C1A18]'
-                        }`}
-                      >
-                        {tr('2. PIN', '2. PIN', '2. PIN', '2. PIN')}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setDemoShareStep('unlocked')}
-                        className={`px-2 py-1 rounded-md transition-colors cursor-pointer ${
-                          demoShareStep === 'unlocked'
-                            ? companionCta.activePillClass
-                            : 'text-[#524D46] hover:text-[#1C1A18]'
-                        }`}
-                      >
-                        {tr('3. Odczyt', '3. Read', '3. Lectura', '3. Lecture')}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setDemoShareStep('burned')}
-                        className={`px-2 py-1 rounded-md transition-colors cursor-pointer ${
-                          demoShareStep === 'burned'
-                            ? companionCta.activePillClass
-                            : 'text-[#524D46] hover:text-[#1C1A18]'
-                        }`}
-                      >
-                        {tr('4. Zniszczony', '4. Burned', '4. Destruido', '4. Détruit')}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Interactive One-Time Share Simulator Box */}
-                  <div className="rounded-xl bg-[#FAF8F5] border border-[#DDD6C8] p-5 space-y-4 shadow-2xs">
-                    {demoShareStep === 'create' && (
-                      <div className="space-y-4">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <span className="text-xs font-mono-meta text-[#524D46]">
-                            {tr(
-                              'Język dla bliskiej osoby (automatyczne tłumaczenie):',
-                              'Recipient language (automatic translation):',
-                              'Idioma para el destinatario:',
-                              'Langue du destinataire :'
-                            )}
-                          </span>
-                          <div className="inline-flex items-center gap-1 bg-[#F3EFE7] p-0.5 rounded-lg border border-[#E2DDD3] text-[11px] font-mono-meta">
-                            {(['pl', 'en', 'es', 'fr'] as const).map(l => (
-                              <button
-                                key={l}
-                                type="button"
-                                onClick={() => setDemoShareLang(l)}
-                                className={`px-2 py-0.5 rounded uppercase transition-colors cursor-pointer ${
-                                  demoShareLang === l
-                                    ? companionCta.activePillClass
-                                    : 'text-[#524D46] hover:text-[#1C1A18]'
-                                }`}
-                              >
-                                {l}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="p-3.5 rounded-lg bg-[#F3EFE7]/85 border border-[#E2DDD3] space-y-1.5">
-                          <div className="text-[11px] font-mono-meta text-[#7A756D]">
-                            {demoSharedTranslations[demoShareLang].prompt}
-                          </div>
-                          <p className="text-sm font-serif-literary italic text-[#1C1A18] leading-relaxed">
-                            „{demoSharedTranslations[demoShareLang].body}”
-                          </p>
-                        </div>
-
-                        <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-                          <div className="flex items-center gap-2 text-xs font-mono-meta text-[#1C1A18]">
-                            <KeyRound className="w-3.5 h-3.5 text-[#8B2635]" />
-                            <span>PIN:</span>
-                            <span className="px-2 py-0.5 rounded bg-[#EFECE4] border border-[#DDD6C8] font-semibold tracking-widest">
-                              4829
-                            </span>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setDemoShareCopied(true);
-                                setTimeout(() => setDemoShareCopied(false), 1800);
-                              }}
-                              className="px-2.5 py-1.5 rounded border border-[#DDD6C8] bg-[#F5F2EB] hover:bg-[#EAE5DA] text-xs font-mono-meta text-[#524D46] hover:text-[#1C1A18] inline-flex items-center gap-1 cursor-pointer"
-                            >
-                              {demoShareCopied ? (
-                                <>
-                                  <Check className="w-3 h-3 text-[#2E5C33]" />
-                                  <span>{tr('Skopiowano', 'Copied', 'Copiado', 'Copié')}</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Copy className="w-3 h-3" />
-                                  <span>{tr('Kopiuj link + PIN', 'Copy link + PIN', 'Copiar enlace + PIN', 'Copier lien + PIN')}</span>
-                                </>
-                              )}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setDemoShareStep('recipient_pin')}
-                              className={`px-3 py-1.5 rounded ${companionCta.activePillClass} text-xs font-mono-meta inline-flex items-center gap-1 cursor-pointer transition-colors`}
-                            >
-                              <span>{tr('Zobacz widok odbiorcy →', 'Recipient view →', 'Vista receptor →', 'Vue destinataire →')}</span>
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {demoShareStep === 'recipient_pin' && (
-                      <div className="space-y-4 py-2 text-center">
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#F3EFE7] border border-[#E2DDD3] text-[11px] font-mono-meta text-[#524D46]">
-                          <Lock className="w-3 h-3 text-[#8B2635]" />
-                          <span>
-                            {tr(
-                              'Bartek przesyła Ci jednorazową myśl',
-                              'Bartek shared a one-time reflection with you',
-                              'Bartek compartió un pensamiento único contigo',
-                              'Bartek a partagé une pensée unique avec vous'
-                            )}
-                          </span>
-                        </div>
-
-                        <p className="text-xs font-serif-literary text-[#524D46] max-w-sm mx-auto">
-                          {tr(
-                            'Wpisz 4-cyfrowy kod PIN (4829), aby odszyfrować wiadomość w przeglądarce. Po odczytaniu link wygaśnie na zawsze.',
-                            'Enter the 4-digit PIN (4829) to decrypt this note in your browser. Once read, the link expires forever.',
-                            'Introduce el PIN de 4 dígitos (4829) para descifrar la nota. Al leerla, el enlace caduca para siempre.',
-                            'Saisissez le code PIN à 4 chiffres (4829) pour déchiffrer ce mot. Une fois lu, le lien expire définitivement.'
-                          )}
-                        </p>
-
-                        <div className="flex items-center justify-center gap-2">
-                          <input
-                            type="text"
-                            value={demoSharePinInput}
-                            onChange={e => setDemoSharePinInput(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                            className="w-28 text-center py-1.5 px-3 rounded border border-[#1C1A18] bg-[#F7F5F0] font-mono-meta text-sm tracking-widest text-[#1C1A18]"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setDemoShareStep('unlocked')}
-                            className={`px-4 py-1.5 rounded ${companionCta.activePillClass} text-xs font-mono-meta inline-flex items-center gap-1.5 cursor-pointer transition-colors`}
-                          >
-                            <Unlock className="w-3.5 h-3.5" />
-                            <span>{tr('Otwórz jednorazowo', 'Unlock once', 'Abrir una vez', 'Ouvrir une fois')}</span>
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {demoShareStep === 'unlocked' && (
-                      <div className="space-y-3.5">
-                        <div className="flex items-center justify-between text-[11px] font-mono-meta text-[#2E5C33]">
-                          <span className="inline-flex items-center gap-1">
-                            <Unlock className="w-3 h-3" />
-                            <span>
-                              {tr(
-                                'Odszyfrowano w przeglądarce · Kopia na serwerze usunięta',
-                                'Decrypted in browser · Server copy permanently deleted',
-                                'Descifrado en navegador · Copia del servidor eliminada',
-                                'Déchiffré dans le navigateur · Copie serveur supprimée'
-                              )}
-                            </span>
-                          </span>
-                          <span className="uppercase px-1.5 py-0.5 rounded bg-[#EBF2EB] border border-[#CCE2CC]">
-                            {demoShareLang}
-                          </span>
-                        </div>
-
-                        <div className="p-4 rounded-lg bg-[#F3EFE7] border border-[#E2DDD3] space-y-2">
-                          <div className="text-xs font-serif-literary text-[#6E6961]">
-                            {demoSharedTranslations[demoShareLang].prompt}
-                          </div>
-                          <p className="text-base font-serif-literary text-[#1C1A18] leading-relaxed">
-                            „{demoSharedTranslations[demoShareLang].body}”
-                          </p>
-                        </div>
-
-                        <div className="flex justify-end">
-                          <button
-                            type="button"
-                            onClick={() => setDemoShareStep('burned')}
-                            className="px-3 py-1.5 rounded border border-[#8B2635]/40 bg-[#FDF2F2] hover:bg-[#F9E2E2] text-xs font-mono-meta text-[#8B2635] cursor-pointer"
-                          >
-                            {tr(
-                              'Sprawdź co się stanie przy kolejnym wejściu w link →',
-                              'See what happens if someone opens the link again →',
-                              'Ver qué pasa al abrir el enlace de nuevo →',
-                              'Voir ce qui se passe si l’on rouvre le lien →'
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {demoShareStep === 'burned' && (
-                      <div className="py-4 text-center space-y-3">
-                        <div className="w-9 h-9 rounded-full bg-[#FDF2F2] border border-[#E8C5C5] text-[#8B2635] flex items-center justify-center mx-auto">
-                          <ShieldAlert className="w-4 h-4" />
-                        </div>
-                        <div className="space-y-1">
-                          <h4 className="text-base font-serif-literary font-medium text-[#1C1A18]">
-                            {tr(
-                              'Ten jednorazowy moment został już przeczytany i trwale usunięty.',
-                              'This one-time moment has already been read and permanently destroyed.',
-                              'Este momento único ya fue leído y destruido permanentemente.',
-                              'Ce moment unique a déjà été lu et définitivement détruit.'
-                            )}
-                          </h4>
-                          <p className="text-xs font-mono-meta text-[#7A756D]">
-                            {tr(
-                              'Nikt — łącznie z serwerem — nie może już odtworzyć tego linku.',
-                              'No one — including the server — can ever access this link again.',
-                              'Nadie puede volver a abrir este enlace.',
-                              'Personne ne peut plus accéder à ce lien.'
-                            )}
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setDemoShareStep('create')}
-                          className="px-3 py-1 rounded border border-[#DDD6C8] bg-[#F5F2EB] hover:bg-[#EAE5DA] text-[11px] font-mono-meta text-[#524D46] cursor-pointer"
-                        >
-                          {tr('← Pokaż od początku', '← Restart demo', '← Reiniciar demo', '← Recommencer')}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="pt-2 flex items-center justify-between gap-3 border-t border-[#EAE5DA]">
-                    <span className="text-[11px] font-mono-meta text-[#7A756D]">
-                      {tr(
-                        'Dostępne po zamknięciu dnia przyciskiem „Podziel się myślą”',
-                        'Available after sealing your day via “Share a thought”',
-                        'Disponible al cerrar el día con «Compartir pensamiento»',
-                        'Disponible après clôture du jour via « Partager une pensée »'
-                      )}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={handleSaveEntryTrigger}
-                      className={`px-3.5 py-1.5 rounded ${companionCta.activePillClass} text-xs font-mono-meta inline-flex items-center gap-1.5 transition-colors cursor-pointer shrink-0`}
-                    >
-                      <span>{tr('Wypróbuj u siebie', 'Try it yourself', 'Pruébalo', 'Essayer')}</span>
-                      <ArrowRight className="w-3 h-3" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* 4. WEEKLY LINE-ART CHARTS & WRITING STATISTICS SECTION */}
-        <section id="stats-section" className="border-t border-[#E5DFD3] py-16 md:py-24">
-          <div className="max-w-6xl mx-auto px-6">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
-              {/* Left Column: Description & 4 Minimalist Metrics */}
-              <div className="lg:col-span-5 space-y-6">
-                <div className="space-y-3">
-                  <div className="inline-flex items-center gap-2 text-xs font-mono-meta text-[#7A756D]">
-                    {/* Hand-drawn Line-Art Chart Icon */}
-                    <svg
-                      viewBox="0 0 26 20"
-                      className="w-5.5 h-4 shrink-0 overflow-visible"
-                      aria-hidden="true"
-                    >
-                      <line x1="2" y1="17" x2="24" y2="17" stroke="#1C1A18" strokeWidth="1.5" strokeLinecap="round" />
-                      <path
-                        d="M4 14 L10 9 L16 11.5 L22 4.5"
-                        fill="none"
-                        stroke="#1C1A18"
-                        strokeWidth="1.6"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                      <circle cx="10" cy="9" r="2.2" fill="#FAF8F5" stroke="#1C1A18" strokeWidth="1.3" />
-                      <circle cx="22" cy="4.5" r="2.6" fill="#EBC5CF" stroke="#8B2635" strokeWidth="1.4" />
-                    </svg>
-                    <span>
-                      {tr(
-                        '05 · Wykresy i statystyki pisania',
-                        '05 · Charts & writing statistics',
-                        '05 · Gráficos y estadísticas',
-                        '05 · Graphiques et statistiques'
-                      )}
-                    </span>
-                  </div>
-                  <h2
-                    className="text-3xl sm:text-4xl font-serif-literary text-[#1C1A18] leading-tight"
-                    style={{ textWrap: 'balance' }}
-                  >
-                    {tr(
-                      'Lekkie, liniowe wykresy skupione na Twoim tygodniu.',
-                      'Light, line-art charts focused on your week.',
-                      'Gráficos lineales y ligeros centrados en tu semana.',
-                      'Des graphiques linéaires et légers centrés sur votre semaine.'
-                    )}
-                  </h2>
-                  <p className="text-base font-serif-literary text-[#524D46] leading-relaxed">
-                    {tr(
-                      'Zamiast ciężkich, blokowych tabel widzisz dwa rysunkowe wykresy w stylu naszego logo: rytm słów z ostatnich 7 dni oraz dokładną porę dnia, o której powstawały Twoje wpisy.',
-                      'Instead of heavy blocky tables, see two hand-drawn line charts matching our logo aesthetic: your 7-day word rhythm and the exact time of day each entry was written.',
-                      'En lugar de tablas pesadas, observa dos gráficos lineales del estilo de nuestro logo: el ritmo semanal de palabras y la hora exacta a la que escribiste cada día.',
-                      'Au lieu de tableaux massifs, retrouvez deux graphiques linéaires dans le style de notre logo : le rythme hebdomadaire des mots et l’heure précise d’écriture de chaque jour.'
-                    )}
-                  </p>
-                </div>
-
-                {/* 4 Minimalist Metrics Preview */}
-                <div className="grid grid-cols-2 gap-4 pt-2 border-t border-[#E5DFD3]">
-                  <div className="p-3.5 rounded-lg bg-[#FAF8F5] border border-[#E5DFD3] space-y-0.5">
-                    <div className="text-[10px] font-mono-meta uppercase tracking-wider text-[#7A756D]">
-                      {tr('Systematyczność', 'Consistency', 'Constancia', 'Régularité')}
-                    </div>
-                    <div className="text-xl font-serif-literary text-[#1C1A18] tabular-nums">
-                      3{' '}
-                      <span className="text-xs font-mono-meta text-[#7A756D]">
-                        {tr('dni z rzędu', 'days in a row', 'días seguidos', 'jours de suite')}
-                      </span>
-                    </div>
-                    <div className="text-[11px] font-mono-meta text-[#7A756D]">
-                      3/7 {tr('dni w tym tyg.', 'days this week', 'días esta sem.', 'jours cette sem.')}
-                    </div>
-                  </div>
-
-                  <div className="p-3.5 rounded-lg bg-[#FAF8F5] border border-[#E5DFD3] space-y-0.5">
-                    <div className="text-[10px] font-mono-meta uppercase tracking-wider text-[#7A756D]">
-                      {tr('Napisane słowa', 'Words written', 'Palabras escritas', 'Mots écrits')}
-                    </div>
-                    <div className="text-xl font-serif-literary text-[#1C1A18] tabular-nums">
-                      412{' '}
-                      <span className="text-xs font-mono-meta text-[#7A756D]">
-                        {tr('słów', 'words', 'palabras', 'mots')}
-                      </span>
-                    </div>
-                    <div className="text-[11px] font-mono-meta text-[#8B2635] flex items-center gap-1">
-                      <Lock className="w-3 h-3" />
-                      <span>3 {tr('zamknięte wpisy', 'sealed entries', 'entradas cerradas', 'entrées closes')}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Right Column: Compact 7-day Line-Art Charts (Words + Time of Day, interactive on hover) */}
-              <div className="lg:col-span-7">
-                <div className="bg-[#FAF8F5] border border-[#E5DFD3] rounded-2xl p-5 sm:p-7 space-y-5 max-w-xl mx-auto">
-                  {/* Chart 1: 7-day Word Count Line-Art Chart */}
-                  <div className="space-y-2 p-3.5 rounded-xl border border-transparent hover:border-[#E2DDD3] hover:bg-[#F7F5F0]/80 transition-all duration-300 ease-out hover:-translate-y-0.5 hover:shadow-[0_6px_20px_-10px_rgba(28,26,24,0.1)]">
-                    <div className="flex items-center justify-between gap-2">
-                      <div>
-                        <div className="text-[11px] font-mono-meta uppercase tracking-wider text-[#1C1A18] font-medium">
-                          {tr(
-                            'Rytm tygodnia · Liczba słów',
-                            'Weekly rhythm · Word count',
-                            'Ritmo semanal · Palabras',
-                            'Rythme hebdomadaire · Mots'
-                          )}
-                        </div>
-                        <div className="text-[10px] font-mono-meta text-[#7A756D] tabular-nums">
-                          16.10 – 22.10 ·{' '}
-                          {tr(
-                            'najedź na dzień, aby podświetlić',
-                            'hover a day to inspect',
-                            'pasa el cursor sobre un día',
-                            'survolez un jour'
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 text-[10px] font-mono-meta text-[#7A756D]">
-                        <span className="inline-flex items-center gap-1">
-                          <span className="w-2.5 h-2.5 rounded-full bg-[#EBC5CF] border border-[#1C1A18] inline-block" />
-                          <span>{tr('Zamknięty', 'Sealed', 'Cerrado', 'Clos')}</span>
-                        </span>
-                        <span className="inline-flex items-center gap-1">
-                          <span className="w-2.5 h-2.5 rounded-full bg-[#FAF8F5] border border-[#1C1A18] inline-block" />
-                          <span>{tr('Szkic', 'Draft', 'Borrador', 'Brouillon')}</span>
-                        </span>
-                      </div>
-                    </div>
-
-                    <svg viewBox="0 0 380 145" className="w-full h-auto overflow-visible select-none">
-                      <defs>
-                        <linearGradient id="landingWordsGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#EBC5CF" stopOpacity="0.45" />
-                          <stop offset="100%" stopColor="#EBC5CF" stopOpacity="0.0" />
-                        </linearGradient>
-                      </defs>
-                      <line x1="28" y1="26" x2="352" y2="26" stroke="#E6E0D4" strokeWidth="1" strokeDasharray="3 4" />
-                      <line x1="28" y1="64" x2="352" y2="64" stroke="#E6E0D4" strokeWidth="1" strokeDasharray="3 4" />
-                      <line x1="28" y1="102" x2="352" y2="102" stroke="#1C1A18" strokeWidth="1.35" strokeLinecap="round" />
-
-                      {/* Soft rose area under active days */}
-                      <path
-                        d="M 244 52 C 262 52, 280 28, 298 28 C 316 28, 334 44, 352 44 L 352 102 L 244 102 Z"
-                        fill="url(#landingWordsGrad)"
-                      />
-                      {/* Smooth line-art curve */}
-                      <path
-                        d="M 28 102 L 82 102 L 136 102 L 190 102 C 208 102, 226 52, 244 52 C 262 52, 280 28, 298 28 C 316 28, 334 44, 352 44"
-                        fill="none"
-                        stroke="#1C1A18"
-                        strokeWidth="1.75"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-
-                      {[
-                        { x: 28, y: 102, w: 0, day: tr('Pt', 'Fri', 'Vie', 'Ven'), date: '16.10' },
-                        { x: 82, y: 102, w: 0, day: tr('Sob', 'Sat', 'Sáb', 'Sam'), date: '17.10' },
-                        { x: 136, y: 102, w: 0, day: tr('Niedz', 'Sun', 'Dom', 'Dim'), date: '18.10' },
-                        { x: 190, y: 102, w: 0, day: tr('Pon', 'Mon', 'Lun', 'Lun'), date: '19.10' },
-                        { x: 244, y: 52, w: 118, day: tr('Wt', 'Tue', 'Mar', 'Mar'), date: '20.10' },
-                        { x: 298, y: 28, w: 164, day: tr('Śr', 'Wed', 'Mié', 'Mer'), date: '21.10' },
-                        { x: 352, y: 44, w: 130, day: tr('Czw', 'Thu', 'Jue', 'Jeu'), date: '22.10' },
-                      ].map((pt, i) => {
-                        const isHovered = hoveredLandingWordIdx === i;
-                        const cyPos = pt.w > 0 && isHovered ? pt.y - 3 : pt.y;
-                        return (
-                          <g
-                            key={i}
-                            onMouseEnter={() => setHoveredLandingWordIdx(i)}
-                            onMouseLeave={() => setHoveredLandingWordIdx(null)}
-                            className="cursor-pointer"
-                          >
-                            <rect x={pt.x - 24} y={10} width={48} height={128} fill="transparent" />
-                            {pt.w > 0 && (
-                              <>
-                                <line
-                                  x1={pt.x}
-                                  y1={cyPos}
-                                  x2={pt.x}
-                                  y2={102}
-                                  stroke={isHovered ? '#8B2635' : '#1C1A18'}
-                                  strokeWidth={isHovered ? '1.5' : '1.1'}
-                                  strokeDasharray="2 2.5"
-                                  opacity={isHovered ? '0.75' : '0.32'}
-                                />
-                                <text
-                                  x={pt.x}
-                                  y={cyPos - 9}
-                                  textAnchor="middle"
-                                  className={`text-[9.5px] font-mono-meta font-medium transition-colors duration-200 ${
-                                    isHovered ? 'fill-[#8B2635] font-semibold' : 'fill-[#1C1A18]'
-                                  }`}
-                                >
-                                  {pt.w}
-                                </text>
-                              </>
-                            )}
-                            {pt.w > 0 ? (
-                              <>
-                                {isHovered && (
-                                  <circle
-                                    cx={pt.x}
-                                    cy={cyPos}
-                                    r="9.5"
-                                    fill="#EBC5CF"
-                                    fillOpacity="0.45"
-                                  />
-                                )}
-                                <circle
-                                  cx={pt.x}
-                                  cy={cyPos}
-                                  r={isHovered ? '6' : '5'}
-                                  fill={isHovered ? '#DF9FB0' : '#EBC5CF'}
-                                  stroke={isHovered ? '#8B2635' : '#1C1A18'}
-                                  strokeWidth={isHovered ? '1.8' : '1.6'}
-                                  className="transition-all duration-200"
-                                />
-                                <circle
-                                  cx={pt.x}
-                                  cy={cyPos}
-                                  r="1.6"
-                                  fill={isHovered ? '#8B2635' : '#1C1A18'}
-                                />
-                              </>
-                            ) : (
-                              <circle
-                                cx={pt.x}
-                                cy={isHovered ? 100.5 : 102}
-                                r={isHovered ? '3.3' : '2.5'}
-                                fill={isHovered ? '#EBC5CF' : '#FAF8F5'}
-                                stroke={isHovered ? '#8B2635' : '#B5B0A6'}
-                                strokeWidth="1.3"
-                                className="transition-all duration-200"
-                              />
-                            )}
-                            <text
-                              x={pt.x}
-                              y={119}
-                              textAnchor="middle"
-                              className={`text-[9.5px] font-serif-literary transition-colors duration-200 ${
-                                isHovered
-                                  ? 'fill-[#8B2635] font-semibold'
-                                  : pt.w > 0
-                                  ? 'fill-[#1C1A18] font-medium'
-                                  : 'fill-[#7A756D]'
-                              }`}
-                            >
-                              {pt.day}
-                            </text>
-                            <text
-                              x={pt.x}
-                              y={132}
-                              textAnchor="middle"
-                              className={`text-[8.5px] font-mono-meta transition-colors duration-200 ${
-                                isHovered ? 'fill-[#8B2635]' : 'fill-[#9E978C]'
-                              }`}
-                            >
-                              {pt.date}
-                            </text>
-                          </g>
-                        );
-                      })}
-                    </svg>
-                  </div>
-
-                  {/* Chart 2: Time-of-Day Writing Schedule (06:00 at bottom, 23:00 at top) */}
-                  <div className="pt-4 border-t border-[#ECE7DC] space-y-2 p-3.5 rounded-xl border border-transparent hover:border-[#E2DDD3] hover:bg-[#F7F5F0]/80 transition-all duration-300 ease-out hover:-translate-y-0.5 hover:shadow-[0_6px_20px_-10px_rgba(28,26,24,0.1)]">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="text-[11px] font-mono-meta uppercase tracking-wider text-[#1C1A18] font-medium">
-                        {tr(
-                          'Pora pisania każdego dnia',
-                          'Time of writing each day',
-                          'Hora de escritura cada día',
-                          'Heure d’écriture chaque jour'
-                        )}
-                      </div>
-                      <span className="px-2 py-0.5 rounded-md bg-[#F2EFE8] border border-[#E2DDD3] text-[10px] font-mono-meta text-[#1C1A18] tabular-nums">
-                        {tr('Śr. pora:', 'Avg time:', 'Hora media:', 'Heure moy. :')} 21:15
-                      </span>
-                    </div>
-
-                    <svg viewBox="0 0 380 128" className="w-full h-auto overflow-visible select-none">
-                      {/* Inverted Y-axis: 23:00 at top (y=26), 14:00 in middle (y=60), 06:00 at bottom (y=94) */}
-                      <text x="0" y="29" className="fill-[#8C857B] text-[8.5px] font-mono-meta">23:00</text>
-                      <text x="0" y="63" className="fill-[#8C857B] text-[8.5px] font-mono-meta">14:00</text>
-                      <text x="0" y="97" className="fill-[#8C857B] text-[8.5px] font-mono-meta">06:00</text>
-                      <line x1="34" y1="26" x2="352" y2="26" stroke="#E6E0D4" strokeWidth="1" strokeDasharray="3 4" />
-                      <line x1="34" y1="60" x2="352" y2="60" stroke="#E6E0D4" strokeWidth="1" strokeDasharray="3 4" />
-                      <line x1="34" y1="94" x2="352" y2="94" stroke="#1C1A18" strokeWidth="1.35" strokeLinecap="round" />
-
-                      {/* Subtle vertical day tracks */}
-                      {[42, 92, 142, 192, 244, 298, 352].map((xPos, idx) => (
-                        <line
-                          key={`track-${idx}`}
-                          x1={xPos}
-                          y1={26}
-                          x2={xPos}
-                          y2={94}
-                          stroke="#ECE7DC"
-                          strokeWidth="1"
-                        />
-                      ))}
-
-                      {/* Smooth dashed curve connecting evening writing times near 23:00 top */}
-                      <path
-                        d="M 244 33 C 262 33, 280 36, 298 36 C 316 36, 334 30, 352 30"
-                        fill="none"
-                        stroke="#1C1A18"
-                        strokeWidth="1.65"
-                        strokeDasharray="4 3"
-                        strokeLinecap="round"
-                      />
-                      {[
-                        { x: 42, y: null, t: null, d: '16.10' },
-                        { x: 92, y: null, t: null, d: '17.10' },
-                        { x: 142, y: null, t: null, d: '18.10' },
-                        { x: 192, y: null, t: null, d: '19.10' },
-                        { x: 244, y: 33, t: '21:10', d: '20.10' },
-                        { x: 298, y: 36, t: '20:45', d: '21.10' },
-                        { x: 352, y: 30, t: '21:50', d: '22.10' },
-                      ].map((pt, i) => {
-                        const isHovered = hoveredLandingTimeIdx === i;
-                        const cyPos = pt.y !== null ? (isHovered ? pt.y - 3 : pt.y) : null;
-                        return (
-                          <g
-                            key={i}
-                            onMouseEnter={() => setHoveredLandingTimeIdx(i)}
-                            onMouseLeave={() => setHoveredLandingTimeIdx(null)}
-                            className="cursor-pointer"
-                          >
-                            <rect x={pt.x - 24} y={8} width={48} height={112} fill="transparent" />
-                            {cyPos !== null && pt.t ? (
-                              <>
-                                <line
-                                  x1={pt.x}
-                                  y1={cyPos}
-                                  x2={pt.x}
-                                  y2={94}
-                                  stroke={isHovered ? '#8B2635' : '#1C1A18'}
-                                  strokeWidth={isHovered ? '1.5' : '1.1'}
-                                  strokeDasharray="2 2.5"
-                                  opacity={isHovered ? '0.75' : '0.32'}
-                                />
-                                {isHovered && (
-                                  <circle
-                                    cx={pt.x}
-                                    cy={cyPos}
-                                    r="9.5"
-                                    fill="#EBC5CF"
-                                    fillOpacity="0.45"
-                                  />
-                                )}
-                                <circle
-                                  cx={pt.x}
-                                  cy={cyPos}
-                                  r={isHovered ? '6' : '5'}
-                                  fill={isHovered ? '#DF9FB0' : '#EBC5CF'}
-                                  stroke={isHovered ? '#8B2635' : '#1C1A18'}
-                                  strokeWidth={isHovered ? '1.8' : '1.6'}
-                                  className="transition-all duration-200"
-                                />
-                                <circle
-                                  cx={pt.x}
-                                  cy={cyPos}
-                                  r="1.6"
-                                  fill={isHovered ? '#8B2635' : '#1C1A18'}
-                                />
-                                <rect
-                                  x={pt.x - 16}
-                                  y={cyPos - 20}
-                                  width="32"
-                                  height="12.5"
-                                  rx="3.5"
-                                  fill={isHovered ? '#8B2635' : '#FAF8F5'}
-                                  stroke={isHovered ? '#8B2635' : '#DDD6C8'}
-                                  strokeWidth="1"
-                                  className="transition-all duration-200"
-                                />
-                                <text
-                                  x={pt.x}
-                                  y={cyPos - 11.2}
-                                  textAnchor="middle"
-                                  className={`text-[8.5px] font-mono-meta font-medium transition-colors duration-200 ${
-                                    isHovered ? 'fill-[#FAF8F5]' : 'fill-[#1C1A18]'
-                                  }`}
-                                >
-                                  {pt.t}
-                                </text>
-                              </>
-                            ) : (
-                              <circle
-                                cx={pt.x}
-                                cy={isHovered ? 92.5 : 94}
-                                r={isHovered ? '3.2' : '2.3'}
-                                fill={isHovered ? '#EBC5CF' : '#FAF8F5'}
-                                stroke={isHovered ? '#8B2635' : '#C8C2B4'}
-                                strokeWidth="1.3"
-                                className="transition-all duration-200"
-                              />
-                            )}
-                            <text
-                              x={pt.x}
-                              y={112}
-                              textAnchor="middle"
-                              className={`text-[8.5px] font-mono-meta transition-colors duration-200 ${
-                                isHovered
-                                  ? 'fill-[#8B2635] font-semibold'
-                                  : pt.y !== null
-                                  ? 'fill-[#524D46] font-medium'
-                                  : 'fill-[#9E978C]'
-                              }`}
-                            >
-                              {pt.d}
-                            </text>
-                          </g>
-                        );
-                      })}
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* 5. MOBILE + SIMPLE PWA INSTALLATION + VOICE DICTATION SECTION */}
-        <section id="mobile-section" className="border-t border-[#E5DFD3] bg-[#F3EFE7]/55 py-16 md:py-24">
-          <div className="max-w-6xl mx-auto px-6">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
-              {/* Left Column: Mobile & Simple Installation Features */}
-              <div className="lg:col-span-5 space-y-6">
-                <div className="space-y-3">
-                  <div className="text-xs font-mono-meta text-[#8B2635] flex items-center gap-2">
-                    <Smartphone className="w-4 h-4" />
-                    <span>
-                      {tr(
-                        '06 · Mobile + Prosta instalacja',
-                        '06 · Mobile + Simple Installation',
-                        '06 · Móvil + Instalación sencilla',
-                        '06 · Mobile + Installation simple'
-                      )}
-                    </span>
-                  </div>
-
-                  <h2
-                    className="text-3xl sm:text-4xl font-serif-literary text-[#1C1A18] leading-tight"
-                    style={{ textWrap: 'balance' }}
-                  >
-                    {tr(
-                      'Zainstaluj na telefonie jednym kliknięciem i dyktuj myśli głosem.',
-                      'Install on your phone in one tap and dictate your thoughts by voice.',
-                      'Instálalo en tu móvil con un toque y dicta tus pensamientos por voz.',
-                      'Installez sur votre téléphone en un geste et dictez vos pensées à la voix.'
-                    )}
-                  </h2>
-
-                  <p className="text-base font-serif-literary text-[#524D46] leading-relaxed">
-                    {tr(
-                      'Bez sklepów z aplikacjami i bez ciężkich instalacji. Dodaj Momenty do ekranu głównego (Android i iOS), aby uruchamiać czystą kartkę w pełnym ekranie — z obsługą offline i mobilnymi ułatwieniami.',
-                      'No app stores or bloated downloads. Add Moments to your home screen (Android & iOS) to open a fullscreen page with offline support and mobile-first writing tools.',
-                      'Sin tiendas de aplicaciones. Añade Moments a tu pantalla de inicio (Android e iOS) para abrir tu página a pantalla completa con modo sin conexión y herramientas móviles.',
-                      'Sans boutique d’applications. Ajoutez Moments à votre écran d’accueil (Android et iOS) pour ouvrir votre page en plein écran avec mode hors-ligne et outils mobiles.'
-                    )}
-                  </p>
-                </div>
-
-                {/* 3 Mobile Feature Highlights */}
-                <div className="space-y-3">
-                  <div className="p-4 rounded-xl bg-[#FAF8F5] border border-[#E5DFD3] flex items-start gap-3.5">
-                    <div className="w-8 h-8 rounded-lg bg-[#F2EFE8] border border-[#DDD6C8] flex items-center justify-center shrink-0 mt-0.5">
-                      <Mic className="w-4 h-4 text-[#8B2635]" />
-                    </div>
-                    <div className="space-y-0.5">
-                      <h3 className="text-sm font-serif-literary font-semibold text-[#1C1A18]">
-                        {tr(
-                          'Mobilne dyktowanie głosem',
-                          'Mobile voice dictation',
-                          'Dictado por voz en el móvil',
-                          'Dictée vocale sur mobile'
-                        )}
-                      </h3>
-                      <p className="text-xs font-serif-literary text-[#524D46] leading-relaxed">
-                        {tr(
-                          'Pływający przycisk mikrofonu nad klawiaturą oraz przycisk „Dyktuj” w pasku pozwalają mówić swobodnie na spacerze lub przed snem — słowa od razu zamieniają się w tekst.',
-                          'A floating microphone button and the sticky “Dictate” button let you speak freely on a walk or before sleep — turning your voice directly into text.',
-                          'Un botón de micrófono flotante y «Dictar» en la barra te permiten hablar con naturalidad y convertir tu voz en texto al instante.',
-                          'Un bouton microphone flottant et le bouton « Dicter » vous permettent de parler librement — votre voix se transforme instantanément en texte.'
-                        )}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="p-4 rounded-xl bg-[#FAF8F5] border border-[#E5DFD3] flex items-start gap-3.5">
-                    <div className="w-8 h-8 rounded-lg bg-[#F2EFE8] border border-[#DDD6C8] flex items-center justify-center shrink-0 mt-0.5">
-                      <Eye className="w-4 h-4 text-[#1C1A18]" />
-                    </div>
-                    <div className="space-y-0.5">
-                      <h3 className="text-sm font-serif-literary font-semibold text-[#1C1A18]">
-                        {tr(
-                          'Przyklejony pasek z pytaniem pomocniczym',
-                          'Sticky bar with follow-up question',
-                          'Barra fija con pregunta de seguimiento',
-                          'Barre fixe avec question de relance'
-                        )}
-                      </h3>
-                      <p className="text-xs font-serif-literary text-[#524D46] leading-relaxed">
-                        {tr(
-                          'Gdy przewijasz dłuższy wpis na telefonie, pasek z dyktowaniem, korektą pisowni, pogrubieniem oraz pytaniem pomocniczym pozostaje przyklejony u góry ekranu.',
-                          'As you scroll through a longer entry on your phone, the toolbar with dictation, spellcheck, formatting, and the follow-up question stays pinned at the top.',
-                          'Al desplazarte por tu entrada en el móvil, la barra con dictado, ortografía y la pregunta de apoyo permanece visible arriba.',
-                          'Lorsque vous faites défiler votre texte sur mobile, la barre avec dictée, correction et question de relance reste épinglée en haut.'
-                        )}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="p-4 rounded-xl bg-[#FAF8F5] border border-[#E5DFD3] flex items-start gap-3.5">
-                    <div className="w-8 h-8 rounded-lg bg-[#F2EFE8] border border-[#DDD6C8] flex items-center justify-center shrink-0 mt-0.5">
-                      <Download className="w-4 h-4 text-[#2E5C33]" />
-                    </div>
-                    <div className="space-y-0.5">
-                      <h3 className="text-sm font-serif-literary font-semibold text-[#1C1A18]">
-                        {tr(
-                          'Prosta instalacja w 5 sekund (Android i iOS)',
-                          'Simple 5-second installation (Android & iOS)',
-                          'Instalación sencilla en 5 segundos (Android e iOS)',
-                          'Installation simple en 5 secondes (Android et iOS)'
-                        )}
-                      </h3>
-                      <p className="text-xs font-serif-literary text-[#524D46] leading-relaxed">
-                        {tr(
-                          'Kliknij przycisk poniżej, aby dodać ikonę chmurki i słońca do ekranu telefonu. Wpisy synchronizują się z komputerem zaraz po połączeniu.',
-                          'Tap the button below to add the cloud & sun icon to your phone’s home screen. Entries sync seamlessly with your computer.',
-                          'Toca el botón de abajo para añadir el icono a tu pantalla de inicio. Tus entradas se sincronizan automáticamente con tu ordenador.',
-                          'Appuyez sur le bouton ci-dessous pour ajouter l’icône à votre écran d’accueil. Vos entrées se synchronisent avec votre ordinateur.'
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-1 flex flex-wrap items-center gap-3">
+                <div className="pt-3 border-t border-[#ECE7DC] flex items-center justify-between">
                   <button
                     type="button"
                     onClick={handleInstallClick}
-                    className={`px-5 py-3 rounded-lg ${companionCta.activePillClass} text-xs font-mono-meta font-medium inline-flex items-center gap-2 cursor-pointer transition-colors`}
+                    className="text-xs font-mono-meta text-[#1C1A18] hover:text-[#8B2635] underline underline-offset-4 inline-flex items-center gap-1.5 cursor-pointer"
                   >
-                    <Smartphone className="w-4 h-4" />
+                    <Download className="w-3.5 h-3.5 text-[#8B2635]" />
                     <span>
                       {isInstalled
-                        ? tr(
-                            'Aplikacja zainstalowana na urządzeniu',
-                            'App installed on this device',
-                            'Aplicación instalada en el dispositivo',
-                            'Application installée sur cet appareil'
-                          )
-                        : tr(
-                            'Zainstaluj aplikację mobilną (Android / iOS)',
-                            'Install mobile app (Android / iOS)',
-                            'Instalar aplicación móvil (Android / iOS)',
-                            'Installer l’application mobile (Android / iOS)'
-                          )}
+                        ? tr('Aplikacja zainstalowana', 'App installed', 'App instalada', 'Application installée')
+                        : tr('Zainstaluj na telefonie →', 'Install on phone →', 'Instalar en el móvil →', 'Installer sur mobile →')}
                     </span>
                   </button>
                 </div>
               </div>
 
-              {/* Right Column: Larger, Generous Mobile App Preview with Sticky Bar + Follow-up Hint + Voice Dictation + Companion */}
-              <div className="lg:col-span-7 flex justify-center">
-                <div className="w-full max-w-[490px] rounded-2xl bg-[#FAF8F5] border border-[#E5DFD3] p-6 sm:p-8 space-y-5 relative transition-all duration-300 hover:-translate-y-0.5 hover:border-[#DDD6C8] hover:shadow-[0_8px_24px_-12px_rgba(28,26,24,0.08)]">
-                  {/* Top Phone Header */}
-                  <div className="flex items-center justify-between pb-3.5 border-b border-[#ECE7DC] text-xs font-mono-meta text-[#7A756D]">
-                    <div className="flex items-center gap-2 text-[#1C1A18] font-serif-literary font-semibold text-base">
-                      <svg viewBox="0 0 36 26" className="w-6 h-4.5 shrink-0 overflow-visible" aria-hidden="true">
-                        <circle cx="26" cy="9" r="5.5" fill="#EBC5CF" stroke="#1C1A18" strokeWidth="1.8" />
-                        <path
-                          d="M6 21 H26 C29 21 30.5 18.5 29.5 16 C28.8 14 26.8 13.5 25.5 14 C24.5 10 20.5 8 17 9.5 C14.5 7.5 10.5 8.5 9.5 12 C6.5 12.2 4 14.5 4.2 17.5 C4.3 19.5 5 21 6 21 Z"
-                          fill="#FAF8F5"
-                          stroke="#1C1A18"
-                          strokeWidth="1.8"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                      <span>{tr('Momenty', 'Moments', 'Moments', 'Moments')}</span>
-                    </div>
-                    <span className="tabular-nums">22 PAŹ · 1/3</span>
-                  </div>
-
-                  {/* Sticky Mobile Toolbar + Pinned Follow-Up Question */}
-                  <div className="rounded-xl bg-[#F7F5F0] border border-[#E5DFD3] p-3.5 sm:p-4 space-y-2.5">
-                    <div className="flex items-center justify-between gap-2 text-xs font-mono-meta">
-                      <div className="flex items-center gap-1.5">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#8B2635] text-[#FAF8F5] font-medium">
-                          <span className="w-2 h-2 rounded-full bg-[#FAF8F5] animate-ping" />
-                          <Mic className="w-3.5 h-3.5" />
-                          <span>{tr('Słucham...', 'Listening...', 'Escuchando...', 'Écoute...')}</span>
-                        </span>
-                        <span className="px-2.5 py-1 rounded-md bg-[#FAF8F5] border border-[#DDD6C8] font-serif-literary font-bold text-[#1C1A18]">
-                          B
-                        </span>
-                        <span className="px-2.5 py-1 rounded-md bg-[#FAF8F5] border border-[#DDD6C8] font-serif-literary italic text-[#1C1A18]">
-                          I
-                        </span>
-                      </div>
-                      <span className="px-2.5 py-1 rounded-md bg-[#FAF8F5] border border-[#DDD6C8] text-[#524D46]">
-                        {tr('Popraw pisownię', 'Fix spelling', 'Ortografía', 'Orthographe')}
-                      </span>
-                    </div>
-
-                    {/* Pinned Mobile Follow-up Question inside Sticky Bar */}
-                    <div className="pt-2.5 border-t border-[#E6E0D4] flex items-start justify-between gap-2.5 text-left">
-                      <p className="text-xs sm:text-sm font-serif-literary italic text-[#524D46] leading-snug">
-                        {tr(
-                          '„Co w tej chwili dało Ci najwięcej spokoju?” →',
-                          '“What gave you the most peace in that moment?” →',
-                          '«¿Qué te dio más paz en ese momento?» →',
-                          '« Qu’est-ce qui vous a apporté le plus de calme à cet instant ? » →'
-                        )}
-                      </p>
-                      <Eye className="w-3.5 h-3.5 text-[#7A756D] shrink-0 mt-0.5" />
-                    </div>
-                  </div>
-
-                  {/* Mobile Writing Area */}
-                  <div className="p-4 sm:p-5 rounded-xl bg-[#F7F5F0]/55 border border-[#ECE7DC] space-y-3 text-left min-h-[195px] relative">
-                    <div className="text-base sm:text-lg font-serif-literary font-semibold text-[#1C1A18] leading-snug">
-                      {tr(
-                        'Jaki drobny moment z dzisiejszego dnia chciałbyś zapamiętać?',
-                        'What small moment from today would you like to remember?',
-                        '¿Qué pequeño momento de hoy te gustaría recordar?',
-                        'Quel petit moment d’aujourd’hui aimeriez-vous retenir ?'
-                      )}
-                    </div>
-                    <p className="text-sm sm:text-base font-serif-literary text-[#1C1A18] leading-relaxed pr-10">
-                      {tr(
-                        'Wracając wieczorem do domu, nagrałem tę myśl głosem. Nawet na telefonie mam pod ręką pytanie pomocnicze i odblokowanie dnia...',
-                        'Walking home in the evening, I dictated this thought by voice. Even on my phone, the follow-up question stays pinned right above...',
-                        'Volviendo a casa por la noche, dicté este pensamiento por voz con la pregunta de apoyo siempre visible arriba...',
-                        'En rentrant ce soir, j’ai dicté cette pensée à la voix avec la question de relance toujours visible en haut...'
-                      )}
-                      <span className="inline-block w-[2px] h-4 bg-[#8B2635] ml-0.5 align-middle animate-pulse" />
-                    </p>
-
-                    {/* Floating Mobile Dictation Mic Button */}
-                    <div className="absolute right-3.5 bottom-3.5 w-10 h-10 rounded-full bg-[#8B2635] text-[#FAF8F5] flex items-center justify-center shadow-xs border border-[#8B2635]">
-                      <Mic className="w-4.5 h-4.5" />
-                    </div>
-                  </div>
-
-                  {/* Companion at the Mobile Desk */}
-                  <div className="pt-1">
-                    <CompanionDesk
-                      companionId={showcaseCompanion}
-                      isTyping={isHeroTyping}
-                      isSealed={false}
-                      isSearching={false}
-                      lang={lang}
-                      onSelectCompanion={handleNextCompanion}
-                    />
-                  </div>
-
-                  {/* Mobile Bottom Footer with Unlock / Seal Day */}
-                  <div className="pt-3 border-t border-[#ECE7DC] flex items-center justify-between text-xs font-mono-meta text-[#7A756D]">
-                    <span>{tr('Dziennik · Wykresy', 'Journal · Charts', 'Diario · Gráficos', 'Journal · Graphiques')}</span>
-                    <span className="inline-flex items-center gap-1.5 text-[#1C1A18] font-medium">
-                      <Unlock className="w-3.5 h-3.5 text-[#8B2635]" />
-                      <span>{tr('Zamknij / Odblokuj dzień', 'Close / Unlock day', 'Cerrar / Abrir día', 'Clore / Ouvrir')}</span>
+              {/* Card 2: Stars & Warm Reflection */}
+              <div id="appreciation-section" className="bg-[#F7F5F0] border border-[#E5DFD3] rounded-2xl p-6 flex flex-col justify-between space-y-5">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="w-9 h-9 rounded-xl bg-[#EBC5CF]/55 border border-[#DDD6C8] flex items-center justify-center text-[#8B2635]">
+                      <Sparkles className="w-4 h-4" />
+                    </span>
+                    <span className="text-[11px] font-mono-meta text-[#7A756D]">
+                      {tr('Co kilka zamkniętych dni', 'Every few sealed days', 'Cada pocos días', 'Tous les quelques jours')}
                     </span>
                   </div>
+
+                  <div className="space-y-1.5">
+                    <h3 className="text-xl font-serif-literary font-medium text-[#1C1A18]">
+                      {tr(
+                        'Gwiazdki i ciepłe podsumowania',
+                        'Stars & warm reflections',
+                        'Estrellas y resúmenes cálidos',
+                        'Étoiles et résumés chaleureux'
+                      )}
+                    </h3>
+                    <p className="text-sm font-serif-literary text-[#524D46] leading-relaxed">
+                      {tr(
+                        'Po kilku wpisach w kalendarzu zapalają się gwiazdki — życzliwe spojrzenie na to, gdzie zwolniłeś tempo i o co zadbałeś.',
+                        'After a few entries, stars light up in your calendar — a kind reflection on where you slowed down and protected your calm.',
+                        'Tras varias entradas, se iluminan estrellas en tu calendario con una mirada cálida a tus últimos días.',
+                        'Après quelques entrées, des étoiles s’allument dans votre calendrier avec un regard bienveillant sur vos derniers jours.'
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t border-[#ECE7DC] flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setShowDemoSparkleModal(true)}
+                    className="text-xs font-mono-meta text-[#1C1A18] hover:text-[#8B2635] underline underline-offset-4 inline-flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-[#8B2635]" />
+                    <span>
+                      {tr('Zobacz przykładową kartę →', 'See sample card →', 'Ver tarjeta de ejemplo →', 'Voir un exemple de carte →')}
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Card 3: One-Time PIN Letter & Weekly Rhythm */}
+              <div id="share-section" className="bg-[#F7F5F0] border border-[#E5DFD3] rounded-2xl p-6 flex flex-col justify-between space-y-5">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="w-9 h-9 rounded-xl bg-[#EBF2EB] border border-[#CCE2CC] flex items-center justify-center text-[#2E5C33]">
+                      <Share2 className="w-4 h-4" />
+                    </span>
+                    <span className="text-[11px] font-mono-meta text-[#7A756D]">
+                      {tr('List z PIN-em · Wykresy', 'PIN letter · Charts', 'Carta con PIN · Gráficos', 'Lettre PIN · Graphiques')}
+                    </span>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <h3 className="text-xl font-serif-literary font-medium text-[#1C1A18]">
+                      {tr(
+                        'Dzielenie się i rytm tygodnia',
+                        'One-time sharing & weekly rhythm',
+                        'Compartir y ritmo semanal',
+                        'Partage unique et rythme hebdomadaire'
+                      )}
+                    </h3>
+                    <p className="text-sm font-serif-literary text-[#524D46] leading-relaxed">
+                      {tr(
+                        'Wyślij wybrane wspomnienie bliskiej osobie jako jednorazowy list z kodem PIN i obserwuj swój spokojny rytm pisania na wykresie.',
+                        'Send a chosen memory to someone close via a single-use PIN link, and follow your steady writing rhythm on a clean line chart.',
+                        'Envía un recuerdo a alguien cercano mediante un enlace único con PIN y sigue tu ritmo de escritura.',
+                        'Envoyez un souvenir à un proche via un lien unique protégé par PIN et suivez votre rythme d’écriture.'
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t border-[#ECE7DC] flex items-center justify-between text-xs font-mono-meta text-[#7A756D]">
+                  <span>
+                    {tr('Dostępne od razu po założeniu konta', 'Available right after creating an account', 'Disponible al crear tu cuenta', 'Disponible dès la création du compte')}
+                  </span>
                 </div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* 6. SECURITY & END-TO-END ENCRYPTION (E2EE) SECTION */}
-        <section id="security-section" className="border-t border-[#E5DFD3] py-16 md:py-24">
+        {/* =====================================================================
+            03 · CLEAN STATIC PRIVACY E2EE SECTION
+           ===================================================================== */}
+        <section id="security-section" className="border-t border-[#E5DFD3] bg-[#F3EFE7]/55 py-16 md:py-24">
           <div className="max-w-6xl mx-auto px-6">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
-              {/* Left Concise Column */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+              {/* Left Column: Short, Clear Explanation */}
               <div className="lg:col-span-5 space-y-5">
-                <div className="space-y-3">
-                  <div className="text-xs font-mono-meta text-[#2E6F40] flex items-center gap-2">
-                    <ShieldCheck className="w-4 h-4" />
-                    <span>
-                      {tr(
-                        '07 · Szyfrowanie E2EE',
-                        '07 · E2EE Security',
-                        '07 · Cifrado E2EE',
-                        '07 · Chiffrement E2EE'
-                      )}
-                    </span>
-                  </div>
-
-                  <h2
-                    className="text-3xl sm:text-4xl font-serif-literary text-[#1C1A18] leading-tight"
-                    style={{ textWrap: 'balance' }}
-                  >
+                <div className="inline-flex items-center gap-2 text-xs font-mono-meta text-[#2E6F40]">
+                  <ShieldCheck className="w-4 h-4 shrink-0" />
+                  <span>
                     {tr(
-                      'Szyfrowane zanim opuści Twoją przeglądarkę.',
-                      'Encrypted before it leaves your browser.',
-                      'Cifrado antes de salir de tu navegador.',
-                      'Chiffré avant même de quitter votre navigateur.'
-                    )}
-                  </h2>
-
-                  <p className="text-base font-serif-literary text-[#524D46] leading-relaxed">
-                    {tr(
-                      'Klucze AES-GCM 256 synchronizują się automatycznie z kontem Google między telefonem a komputerem. Dla dodatkowej ochrony możesz też ustawić własny PIN.',
-                      'Your AES-GCM 256 keys sync automatically with your Google account across phone and computer. You can also set an optional custom PIN.',
-                      'Tus claves AES-GCM 256 se sincronizan automáticamente con tu cuenta de Google entre móvil y ordenador, con opción de PIN propio.',
-                      'Vos clés AES-GCM 256 se synchronisent automatiquement avec votre compte Google entre téléphone et ordinateur, avec option de code PIN personnel.'
-                    )}
-                  </p>
-                </div>
-
-                <div className="space-y-2 pt-3 border-t border-[#E5DFD3] text-xs font-mono-meta text-[#524D46]">
-                  <div>01. AES-GCM 256 · PBKDF2</div>
-                  <div>
-                    02.{' '}
-                    {tr(
-                      'Automatyczna synchronizacja (Telefon ↔ Komputer)',
-                      'Automatic sync (Phone ↔ Computer)',
-                      'Sincronización automática (Móvil ↔ Ordenador)',
-                      'Synchronisation automatique (Téléphone ↔ Ordinateur)'
-                    )}
-                  </div>
-                  <div>
-                    03.{' '}
-                    {tr(
-                      'Opcjonalny własny PIN i nazwa urządzenia',
-                      'Optional custom PIN & device recognition',
-                      'PIN opcional y reconocimiento de dispositivo',
-                      'Code PIN optionnel et reconnaissance d’appareil'
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Right Interactive Live Encryption Inspector */}
-              <div className="lg:col-span-7 bg-[#FAF8F5] border border-[#E5DFD3] rounded-xl p-6 sm:p-8 space-y-5">
-                <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-[#ECE7DC]">
-                  <span className="text-xs font-mono-meta text-[#1C1A18] flex items-center gap-1.5">
-                    <KeyRound className="w-3.5 h-3.5 text-[#2E6F40]" />
-                    {tr(
-                      'Test szyfrowania na żywo',
-                      'Live encryption test',
-                      'Prueba de cifrado en vivo',
-                      'Test de chiffrement en direct'
+                      '03 · Prywatność E2EE',
+                      '03 · E2EE Privacy',
+                      '03 · Privacidad E2EE',
+                      '03 · Confidentialité E2EE'
                     )}
                   </span>
-
-                  <div className="flex items-center gap-1 p-1 bg-[#EFECE4] rounded-lg">
-                    <button
-                      type="button"
-                      onClick={() => setDemoViewMode('decrypted')}
-                      className={`px-3 py-1 rounded text-xs font-mono-meta transition-colors cursor-pointer whitespace-nowrap ${
-                        demoViewMode === 'decrypted'
-                          ? companionCta.activePillClass
-                          : 'text-[#524D46] hover:text-[#1C1A18]'
-                      }`}
-                    >
-                      {tr('Twój widok', 'Your view', 'Tu vista', 'Votre vue')}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDemoViewMode('encrypted')}
-                      className={`px-3 py-1 rounded text-xs font-mono-meta transition-colors cursor-pointer whitespace-nowrap ${
-                        demoViewMode === 'encrypted'
-                          ? companionCta.activePillClass
-                          : 'text-[#524D46] hover:text-[#1C1A18]'
-                      }`}
-                    >
-                      {tr(
-                        'W bazie (Szyfrogram)',
-                        'In database (Ciphertext)',
-                        'En base de datos',
-                        'En base (Texte chiffré)'
-                      )}
-                    </button>
-                  </div>
                 </div>
 
-                <input
-                  type="text"
-                  value={demoSecretText}
-                  onChange={e => setDemoSecretText(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-lg bg-[#F7F5F0] border border-[#DDD6C8] text-sm font-serif-literary text-[#1C1A18] focus:outline-none focus:border-[#1C1A18]"
-                />
+                <h2
+                  className="text-3xl sm:text-4xl font-serif-literary text-[#1C1A18] leading-tight"
+                  style={{ textWrap: 'balance' }}
+                >
+                  {tr(
+                    'Twoje myśli należą wyłącznie do Ciebie.',
+                    'Your thoughts belong solely to you.',
+                    'Tus pensamientos te pertenecen solo a ti.',
+                    'Vos pensées n’appartiennent qu’à vous.'
+                  )}
+                </h2>
 
-                {demoViewMode === 'encrypted' ? (
-                  <div className="rounded-lg bg-[#F7F5F0] p-4 space-y-3">
-                    <div className="font-mono-meta text-[11px] text-[#9E978C] break-all leading-relaxed select-none opacity-65">
-                      {liveEncrypted.encryptedContent} · IV:{liveEncrypted.iv}
-                    </div>
+                <p className="text-base font-serif-literary text-[#524D46] leading-relaxed">
+                  {tr(
+                    'Każdy wpis jest szyfrowany kluczem AES-256 bezpośrednio w Twojej przeglądarce, zanim trafi do chmury. Nawet my nie możemy przeczytać ani jednego Twojego słowa.',
+                    'Every entry is encrypted with an AES-256 key directly in your browser before reaching the cloud. Not even we can read a single word you write.',
+                    'Cada entrada se cifra con una clave AES-256 directamente en tu navegador antes de llegar a la nube. Ni siquiera nosotros podemos leer una sola palabra.',
+                    'Chaque entrée est chiffrée avec une clé AES-256 directement dans votre navigateur avant d’atteindre le nuage. Même nous ne pouvons lire un seul mot.'
+                  )}
+                </p>
 
-                    <div className="p-3.5 rounded-lg bg-[#FAF8F5] border border-[#E5DFD3] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div className="flex items-center gap-2 text-xs font-mono-meta text-[#1C1A18]">
-                        <Lock className="w-3.5 h-3.5 text-[#8B2635] shrink-0" />
+                <div className="pt-2 space-y-2 border-t border-[#EAE5DA] text-xs font-mono-meta text-[#524D46]">
+                  <div className="flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 text-[#2E6F40] shrink-0" />
+                    <span>
+                      {tr(
+                        'Szyfrowanie w przeglądarce (AES-GCM 256)',
+                        'Browser-side encryption (AES-GCM 256)',
+                        'Cifrado en el navegador (AES-GCM 256)',
+                        'Chiffrement dans le navigateur (AES-GCM 256)'
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 text-[#2E6F40] shrink-0" />
+                    <span>
+                      {tr(
+                        'Automatyczna synchronizacja Telefon ↔ Komputer',
+                        'Automatic sync Phone ↔ Computer',
+                        'Sincronización automática Móvil ↔ Ordenador',
+                        'Synchronisation automatique Téléphone ↔ Ordinateur'
+                      )}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Clean Static Side-by-Side Comparison Card */}
+              <div className="lg:col-span-7">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Card A: On Your Device */}
+                  <div className="p-6 rounded-2xl bg-[#FAF8F5] border border-[#E5DFD3] flex flex-col justify-between space-y-4">
+                    <div className="flex items-center justify-between text-xs font-mono-meta text-[#2E6F40]">
+                      <span className="inline-flex items-center gap-1.5 font-medium">
+                        <Unlock className="w-3.5 h-3.5" />
                         <span>
                           {tr(
-                            'Urządzenie klucza: MacBook (Chrome)',
-                            'Key device: MacBook (Chrome)',
-                            'Dispositivo: MacBook (Chrome)',
-                            'Appareil de la clé : MacBook (Chrome)'
+                            'Na Twoim urządzeniu',
+                            'On your device',
+                            'En tu dispositivo',
+                            'Sur votre appareil'
                           )}
                         </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setDemoViewMode('decrypted')}
-                        className={`px-3 py-1.5 rounded-md ${companionCta.activePillClass} text-xs font-mono-meta whitespace-nowrap shrink-0 cursor-pointer transition-colors`}
-                      >
-                        {tr('Odblokuj wpis', 'Unlock entry', 'Desbloquear', 'Déverrouiller')}
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="p-4 rounded-lg bg-[#F7F5F0] space-y-1">
-                    <div className="text-[11px] font-mono-meta text-[#2E6F40] flex items-center gap-1.5">
-                      <Lock className="w-3 h-3" />
-                      <span>
-                        {tr(
-                          'Odszyfrowane w przeglądarce (Telefon ↔ Komputer)',
-                          'Decrypted in browser (Phone ↔ Computer)',
-                          'Descifrado en el navegador (Móvil ↔ Ordenador)',
-                          'Déchiffré dans le navigateur (Téléphone ↔ Ordinateur)'
-                        )}
+                      </span>
+                      <span className="text-[10px] uppercase tracking-wider text-[#7A756D]">
+                        {tr('Czytelny wpis', 'Readable', 'Legible', 'Lisible')}
                       </span>
                     </div>
-                    <p className="text-base font-serif-literary text-[#1C1A18]">
-                      {demoSecretText ||
-                        tr('(Pusty wpis)', '(Empty entry)', '(Entrada vacía)', '(Entrée vide)')}
+
+                    <p className="text-base font-serif-literary italic text-[#1C1A18] leading-relaxed">
+                      „{demoSecretText}”
                     </p>
+
+                    <div className="pt-3 border-t border-[#E6E0D4] text-[11px] font-mono-meta text-[#7A756D]">
+                      {tr(
+                        'Widoczne tylko po zalogowaniu na Twoim telefonie lub komputerze.',
+                        'Visible only when signed in on your phone or computer.',
+                        'Visible solo al iniciar sesión en tu móvil u ordenador.',
+                        'Visible uniquement connecté sur votre téléphone ou ordinateur.'
+                      )}
+                    </div>
                   </div>
-                )}
+
+                  {/* Card B: In Cloud Database */}
+                  <div className="p-6 rounded-2xl bg-[#FAF8F5] border border-[#E2DDD3] flex flex-col justify-between space-y-4">
+                    <div className="flex items-center justify-between text-xs font-mono-meta text-[#8B2635]">
+                      <span className="inline-flex items-center gap-1.5 font-medium">
+                        <Lock className="w-3.5 h-3.5" />
+                        <span>
+                          {tr(
+                            'W bazie danych',
+                            'In the database',
+                            'En la base de datos',
+                            'Dans la base de données'
+                          )}
+                        </span>
+                      </span>
+                      <span className="text-[10px] uppercase tracking-wider text-[#7A756D]">
+                        AES-256
+                      </span>
+                    </div>
+
+                    <div className="font-mono-meta text-xs text-[#7A756D] break-all leading-relaxed select-none bg-[#F7F5F0] p-3.5 rounded-xl border border-[#E5DFD3]">
+                      {liveEncrypted.encryptedContent.slice(0, 76)}...
+                    </div>
+
+                    <div className="pt-3 border-t border-[#E2DDD3] text-[11px] font-mono-meta text-[#7A756D]">
+                      {tr(
+                        'Serwer przechowuje wyłącznie zaszyfrowany szyfrogram bez dostępu do klucza.',
+                        'The server stores only unreadable ciphertext with zero key access.',
+                        'El servidor guarda solo texto cifrado ilegible sin acceso a la clave.',
+                        'Le serveur ne stocke que du texte chiffré illisible sans accès à la clé.'
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* 5. FINAL CONVERSION SECTION */}
-        <section className="border-t border-[#E5DFD3] bg-[#F2EFE8] py-16">
-          <div className="max-w-2xl mx-auto px-6 text-center space-y-5">
-            <h2
-              className="text-3xl sm:text-4xl font-serif-literary text-[#1C1A18] leading-tight"
-              style={{ textWrap: 'balance' }}
-            >
-              {tr(
-                'Zacznij swój pierwszy moment dzisiaj.',
-                'Start your first moment today.',
-                'Empieza tu primer momento hoy.',
-                'Commencez votre premier moment aujourd’hui.'
-              )}
-            </h2>
-            <div>
+        {/* =====================================================================
+            FINAL PLG CONVERSION SECTION (KARROT-INSPIRED CLEAN CLOSING)
+           ===================================================================== */}
+        <section className="border-t border-[#E5DFD3] bg-[#F2EFE8] py-16 md:py-24">
+          <div className="max-w-xl mx-auto px-6 text-center space-y-6">
+            <div className="flex justify-center">
+              <CompanionDesk
+                companionId={showcaseCompanion}
+                isTyping={isHeroTyping}
+                isSealed={false}
+                isSearching={false}
+                lang={lang}
+                onSelectCompanion={handleNextCompanion}
+              />
+            </div>
+
+            <div className="space-y-2.5">
+              <h2
+                className="text-3xl sm:text-4xl font-serif-literary text-[#1C1A18] leading-tight"
+                style={{ textWrap: 'balance' }}
+              >
+                {tr(
+                  'Gotowy na pierwszy spokojny wieczór z dziennikiem?',
+                  'Ready for your first unhurried evening with a journal?',
+                  '¿Listo para tu primera noche tranquila con tu diario?',
+                  'Prêt pour votre première soirée paisible avec votre journal ?'
+                )}
+              </h2>
+              <p className="text-sm sm:text-base font-serif-literary text-[#524D46]">
+                {tr(
+                  'Załóż darmowe, szyfrowane konto w kilka sekund i zachowaj swój dzisiejszy wpis.',
+                  'Create your free encrypted account in seconds and keep today’s reflection.',
+                  'Crea tu cuenta cifrada gratuita en segundos y guarda tu entrada de hoy.',
+                  'Créez votre compte chiffré gratuit en quelques secondes et gardez votre pensée du jour.'
+                )}
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-1">
               <button
                 type="button"
-                onClick={onGoogleLogin}
+                onClick={() => {
+                  persistPlgDraft(plgDraft, activeHeroPrompt.id, plgWritingSeconds);
+                  onGoogleLogin();
+                }}
                 disabled={isAuthLoading}
-                className={`px-7 py-3.5 text-sm font-mono-meta font-medium ${companionCta.activePillClass} rounded-lg transition-all inline-flex items-center gap-2.5 cursor-pointer whitespace-nowrap disabled:opacity-60`}
+                className={`px-7 py-3.5 text-sm font-mono-meta font-medium ${companionCta.activePillClass} rounded-xl transition-all inline-flex items-center gap-2.5 cursor-pointer whitespace-nowrap shadow-xs disabled:opacity-60`}
               >
+                <Lock className="w-4 h-4" />
                 <span>
                   {isAuthLoading
                     ? tr('Łączenie...', 'Connecting...', 'Conectando...', 'Connexion...')
                     : tr(
-                        'Stwórz konto / Zaloguj',
-                        'Create account / Sign in',
-                        'Crear cuenta / Entrar',
-                        'Créer un compte / Connexion'
+                        'Załóż darmowe konto (Google)',
+                        'Create free account (Google)',
+                        'Crear cuenta gratis (Google)',
+                        'Créer un compte gratuit (Google)'
                       )}
                 </span>
                 <ArrowRight className="w-4 h-4" />
