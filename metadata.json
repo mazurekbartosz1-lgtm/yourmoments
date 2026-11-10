@@ -1,6 +1,6 @@
 {
   "name": "Kronika Dnia",
   "description": "Ultra-minimalistyczna przestrzeń codziennego pisania i mikro-dziennikarstwa z estetyką ciepłego papieru, pikselowym towarzyszem przy biurku i szyfrowaniem end-to-end.",
-  "requestFramePermissions": [],
+  "requestFramePermissions": ["microphone"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

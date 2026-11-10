@@ -538,6 +538,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     }, 20);
   };
 
+  const plgDraftLatestRef = useRef<string>(plgDraft);
+  useEffect(() => {
+    plgDraftLatestRef.current = plgDraft;
+  }, [plgDraft]);
+
   const togglePlgDictation = () => {
     if (typeof window === 'undefined') return;
 
@@ -569,30 +574,49 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     }
 
     try {
+      const isMobileBrowser =
+        typeof navigator !== 'undefined' &&
+        /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
       const rec = new SpeechRec();
       rec.lang =
         lang === 'en' ? 'en-US' : lang === 'es' ? 'es-ES' : lang === 'fr' ? 'fr-FR' : 'pl-PL';
       rec.interimResults = false;
-      rec.continuous = false;
+      rec.continuous = !isMobileBrowser;
       rec.onstart = () => {
         setIsPlgListening(true);
         setPlgSpeechError(null);
       };
       rec.onresult = (event: any) => {
-        const transcript = event?.results?.[0]?.[0]?.transcript;
-        if (transcript && typeof transcript === 'string') {
-          const sep = plgDraft && !/\s$/.test(plgDraft) ? ' ' : '';
-          handlePlgDraftChange(`${plgDraft}${sep}${transcript.trim()}`);
+        let newlyFinalized = '';
+        const startIdx = typeof event?.resultIndex === 'number' ? event.resultIndex : 0;
+        for (let i = startIdx; i < (event?.results?.length || 0); i++) {
+          if (event.results[i]?.isFinal) {
+            const chunk = event.results[i]?.[0]?.transcript;
+            if (chunk && typeof chunk === 'string') {
+              newlyFinalized += (newlyFinalized ? ' ' : '') + chunk.trim();
+            }
+          }
+        }
+        if (newlyFinalized) {
+          const current = plgDraftLatestRef.current;
+          const sep = current && !/\s$/.test(current) ? ' ' : '';
+          const updated = `${current}${sep}${newlyFinalized}`;
+          plgDraftLatestRef.current = updated;
+          handlePlgDraftChange(updated);
         }
       };
       rec.onerror = (event: any) => {
+        if (event?.error === 'no-speech') {
+          return;
+        }
         if (event?.error === 'not-allowed' || event?.error === 'service-not-allowed') {
           setPlgSpeechError(
             tr(
-              'Brak dostępu do mikrofonu. Zezwól na mikrofon po kliknięciu „Dyktuj”.',
-              'Microphone access denied. Please allow microphone access when clicking “Dictate”.',
-              'Acceso al micrófono denegado. Permite el micrófono al pulsar «Dictar».',
-              'Accès au microphone refusé. Veuillez autoriser le microphone.'
+              'Brak dostępu do mikrofonu. Zezwól na mikrofon w przeglądarce po kliknięciu „Dyktuj”.',
+              'Microphone access denied. Allow microphone access in your browser when clicking “Dictate”.',
+              'Acceso al micrófono denegado. Permite el micrófono en el navegador.',
+              'Accès au microphone refusé. Autorisez le microphone dans le navigateur.'
             )
           );
         }
@@ -2198,74 +2222,76 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
           {/* Bottom Section: Gentle PLG Save Banner + Prominent Primary CTA + CompanionDesk + Clean Footer */}
           <div className="w-full overflow-x-hidden flex flex-col items-center shrink-0 mt-1 pt-0.5">
-            {/* Gentle PLG Save Banner after typing + Primary CTA Button */}
-            <div className="max-w-2xl mx-auto w-full px-2.5 sm:px-8 flex flex-col items-center pb-2.5 select-none space-y-2.5">
-              {plgDraft.trim().length >= 8 && !onReturnToEditor && (
-                <div className="w-full rounded-xl bg-[#FAF8F5] border border-[#DDD6C8] px-3.5 py-2.5 sm:px-4 sm:py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-2xs animate-in fade-in slide-in-from-bottom-1 duration-200">
-                  <div className="flex items-center gap-2 text-left">
-                    <span className="w-2 h-2 rounded-full bg-[#2E6F40] shrink-0" />
-                    <span className="text-xs sm:text-sm font-serif-literary text-[#1C1A18]">
-                      {tr(
-                        'Twój wpis jest gotowy do zapieczętowania. Zachowaj ten dzień na prywatnym koncie:',
-                        'Your reflection is ready to seal. Save today’s entry to your private account:',
-                        'Tu entrada está lista para sellarse. Guarda este día en tu cuenta privada:',
-                        'Votre pensée est prête. Enregistrez cette journée sur votre compte privé :'
-                      )}
-                    </span>
-                  </div>
+            {/* Single Primary CTA Button with Animated Closing Padlock */}
+            <div className="max-w-2xl mx-auto w-full px-2.5 sm:px-8 flex flex-col items-center pb-2.5 select-none">
+              {(() => {
+                const hasTypedText = plgDraft.trim().length > 0;
+                return (
                   <button
                     type="button"
-                    onClick={() => {
-                      persistPlgDraft(plgDraft, activeHeroPrompt.id, plgWritingSeconds);
-                      onGoogleLogin();
-                    }}
-                    disabled={isAuthLoading}
-                    className={`px-3.5 py-1.5 rounded-lg ${companionCta.activePillClass} text-xs font-mono-meta font-medium inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-colors disabled:opacity-60`}
+                    onClick={handleSaveEntryTrigger}
+                    className={`group/seal relative overflow-hidden flex items-center justify-center gap-2.5 px-6 sm:px-8 py-2.5 sm:py-3 rounded-xl border text-xs sm:text-sm font-mono-meta font-medium transition-all duration-300 cursor-pointer select-none shadow-sm ${companionCta.buttonClass}`}
                   >
-                    <Lock className="w-3.5 h-3.5" />
-                    <span>
-                      {isAuthLoading
-                        ? tr('Łączenie...', 'Connecting...', 'Conectando...', 'Connexion...')
-                        : tr('Zapisz przez Google (1-klik)', 'Save with Google (1-click)', 'Guardar con Google', 'Enregistrer avec Google')}
+                    {/* Animated Padlock SVG: open when empty, smoothly locks shut & pulses when user writes */}
+                    <svg
+                      viewBox="0 0 18 18"
+                      className={`relative z-10 w-4 h-4 shrink-0 overflow-visible transition-transform duration-300 ${
+                        isPlgUserTyping ? 'scale-110' : 'scale-100'
+                      } ${companionCta.iconClass}`}
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      {/* Shackle (pałąk kłódki) — lifted/open before typing, clicks shut when text is written */}
+                      <path
+                        d={
+                          hasTypedText
+                            ? 'M5.5 8.2 V5.4 C5.5 3.5 7.0 2.1 9 2.1 C11.0 2.1 12.5 3.5 12.5 5.4 V8.2'
+                            : 'M5.5 8.2 V4.6 C5.5 2.7 7.0 1.3 9 1.3 C10.8 1.3 12.2 2.4 12.5 4.0'
+                        }
+                        className="transition-all duration-500 ease-out"
+                        style={{
+                          transform: hasTypedText
+                            ? isPlgUserTyping
+                              ? 'translateY(-0.8px)'
+                              : 'translateY(0px)'
+                            : 'translateY(-1.6px) rotate(-8deg)',
+                          transformOrigin: '5.5px 8.2px',
+                        }}
+                      />
+                      {/* Padlock Body */}
+                      <rect
+                        x="3.2"
+                        y="8.2"
+                        width="11.6"
+                        height="8"
+                        rx="2"
+                        fill={hasTypedText ? companionCta.sealFill : 'none'}
+                        className="transition-colors duration-300"
+                      />
+                      {/* Keyhole */}
+                      <circle cx="9" cy="11.6" r="1" fill="currentColor" stroke="none" />
+                      <path d="M9 12.4 V14.1" strokeWidth="1.4" />
+                    </svg>
+
+                    <span className="relative z-10">
+                      {onReturnToEditor
+                        ? tr('Wróć do swojego dziennika', 'Return to your journal', 'Volver a tu diario', 'Retourner au journal')
+                        : tr(
+                            'Zamknij dzień i załóż konto',
+                            'Close day & create account',
+                            'Cerrar día y crear cuenta',
+                            'Clôturer le jour et créer un compte'
+                          )}
                     </span>
-                    <ArrowRight className="w-3.5 h-3.5" />
+
+                    <ArrowRight className={`w-4 h-4 shrink-0 transition-transform group-hover/seal:translate-x-0.5 ${companionCta.iconClass}`} />
                   </button>
-                </div>
-              )}
-
-              <button
-                type="button"
-                onClick={handleSaveEntryTrigger}
-                className={`group/seal relative overflow-hidden flex items-center justify-center gap-2.5 px-6 sm:px-8 py-2.5 sm:py-3 rounded-xl border text-xs sm:text-sm font-mono-meta font-medium transition-all duration-300 cursor-pointer select-none shadow-sm ${companionCta.buttonClass}`}
-              >
-                <svg
-                  viewBox="0 0 18 18"
-                  className={`relative z-10 w-4 h-4 shrink-0 transition-colors ${companionCta.iconClass}`}
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <rect x="2" y="3.5" width="14" height="11" rx="1.8" />
-                  <path d="M2.5 4.5 L9 9.5 L15.5 4.5" />
-                  <circle cx="9" cy="10" r="1.6" fill={companionCta.sealFill} stroke="currentColor" strokeWidth="1.2" />
-                </svg>
-
-                <span className="relative z-10">
-                  {onReturnToEditor
-                    ? tr('Wróć do swojego dziennika', 'Return to your journal', 'Volver a tu diario', 'Retourner au journal')
-                    : tr(
-                        'Zamknij dzień i załóż konto',
-                        'Close day & create account',
-                        'Cerrar día y crear cuenta',
-                        'Clôturer le jour et créer un compte'
-                      )}
-                </span>
-
-                <ArrowRight className={`w-4 h-4 shrink-0 transition-transform group-hover/seal:translate-x-0.5 ${companionCta.iconClass}`} />
-              </button>
+                );
+              })()}
             </div>
 
             {/* CompanionDesk + 2-line footer */}
