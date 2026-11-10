@@ -113,11 +113,291 @@
         ]
       }
     </script>
+    <style id="momenty-critical-loader-css">
+      html, body {
+        background-color: #F7F5F0;
+        color: #1C1A18;
+        margin: 0;
+        padding: 0;
+        min-height: 100%;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+      /* Keep pre-rendered SEO content in the DOM for search engines while preventing raw unstyled HTML flash */
+      .seo-prerender-fallback {
+        position: absolute !important;
+        width: 1px !important;
+        height: 1px !important;
+        padding: 0 !important;
+        margin: -1px !important;
+        overflow: hidden !important;
+        clip: rect(0, 0, 0, 0) !important;
+        white-space: nowrap !important;
+        border: 0 !important;
+      }
+      #initial-app-loader {
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+        background-color: #F7F5F0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        transition: opacity 0.42s cubic-bezier(0.22, 1, 0.36, 1), visibility 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      #initial-app-loader.is-loaded {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+      }
+      .momenty-loader-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 18px;
+        max-width: 280px;
+        text-align: center;
+      }
+      .momenty-loader-svg {
+        width: 148px;
+        height: 124px;
+        overflow: visible;
+      }
+      .momenty-cloud-group {
+        animation: momentyFloat 3.2s ease-in-out infinite;
+        transform-origin: center;
+      }
+      .momenty-sun {
+        animation: momentySunPulse 3.2s ease-in-out infinite;
+        transform-origin: 96px 32px;
+      }
+      .momenty-star-1 {
+        animation: momentyTwinkle 2.4s ease-in-out infinite;
+        transform-origin: 30px 30px;
+      }
+      .momenty-star-2 {
+        animation: momentyTwinkle 2.4s ease-in-out 0.8s infinite;
+        transform-origin: 122px 52px;
+      }
+      .momenty-star-3 {
+        animation: momentyTwinkle 2.4s ease-in-out 1.5s infinite;
+        transform-origin: 24px 76px;
+      }
+      .momenty-ink-line-1 {
+        stroke-dasharray: 44;
+        stroke-dashoffset: 44;
+        animation: momentyWriteLine1 2.2s ease-in-out infinite;
+      }
+      .momenty-ink-line-2 {
+        stroke-dasharray: 36;
+        stroke-dashoffset: 36;
+        animation: momentyWriteLine2 2.2s ease-in-out infinite;
+      }
+      .momenty-ink-line-3 {
+        stroke-dasharray: 26;
+        stroke-dashoffset: 26;
+        animation: momentyWriteLine3 2.2s ease-in-out infinite;
+      }
+      .momenty-loader-title {
+        font-family: 'Lora', Georgia, 'Times New Roman', serif;
+        font-size: 20px;
+        font-weight: 500;
+        letter-spacing: 0.02em;
+        color: #1C1A18;
+        margin: 0;
+      }
+      .momenty-loader-subtitle {
+        font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 11px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: #7A756D;
+        margin: -8px 0 0 0;
+      }
+      .momenty-loader-bar-track {
+        width: 88px;
+        height: 3px;
+        background-color: #E5DFD3;
+        border-radius: 999px;
+        overflow: hidden;
+        position: relative;
+      }
+      .momenty-loader-bar-fill {
+        width: 45%;
+        height: 100%;
+        background-color: #789A82;
+        border-radius: 999px;
+        animation: momentySlideBar 1.4s ease-in-out infinite;
+      }
+      @keyframes momentyFloat {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-3.5px); }
+      }
+      @keyframes momentySunPulse {
+        0%, 100% { transform: scale(1) rotate(0deg); }
+        50% { transform: scale(1.06) rotate(4deg); }
+      }
+      @keyframes momentyTwinkle {
+        0%, 100% { transform: scale(0.82); opacity: 0.45; }
+        50% { transform: scale(1.12); opacity: 1; }
+      }
+      @keyframes momentyWriteLine1 {
+        0%, 10% { stroke-dashoffset: 44; }
+        45%, 85% { stroke-dashoffset: 0; }
+        100% { stroke-dashoffset: 0; opacity: 0.3; }
+      }
+      @keyframes momentyWriteLine2 {
+        0%, 30% { stroke-dashoffset: 36; }
+        65%, 85% { stroke-dashoffset: 0; }
+        100% { stroke-dashoffset: 0; opacity: 0.3; }
+      }
+      @keyframes momentyWriteLine3 {
+        0%, 50% { stroke-dashoffset: 26; }
+        80%, 88% { stroke-dashoffset: 0; }
+        100% { stroke-dashoffset: 0; opacity: 0.3; }
+      }
+      @keyframes momentySlideBar {
+        0% { transform: translateX(-110%); }
+        50% { transform: translateX(65%); }
+        100% { transform: translateX(230%); }
+      }
+    </style>
   </head>
   <body class="bg-[#F7F5F0] text-[#1C1A18] antialiased">
+    <!-- Hand-drawn line-art initial loader prevents raw unstyled HTML flash -->
+    <div id="initial-app-loader" role="status" aria-label="Otwieranie Momenty">
+      <div class="momenty-loader-card">
+        <svg viewBox="0 0 148 124" class="momenty-loader-svg" aria-hidden="true">
+          <!-- Twinkling 4-point stars in the site's line-art style -->
+          <g class="momenty-star-1">
+            <path
+              d="M30 22 C30 27.5 32.5 30 38 30 C32.5 30 30 32.5 30 38 C30 32.5 27.5 30 22 30 C27.5 30 30 27.5 30 22 Z"
+              fill="#EBC5CF"
+              stroke="#1C1A18"
+              stroke-width="1.6"
+              stroke-linejoin="round"
+            />
+          </g>
+          <g class="momenty-star-2">
+            <path
+              d="M122 45 C122 49.5 124.5 52 129 52 C124.5 52 122 54.5 122 59 C122 54.5 119.5 52 115 52 C119.5 52 122 49.5 122 45 Z"
+              fill="#789A82"
+              stroke="#1C1A18"
+              stroke-width="1.5"
+              stroke-linejoin="round"
+            />
+          </g>
+          <g class="momenty-star-3">
+            <circle cx="24" cy="76" r="3" fill="#FAF8F5" stroke="#1C1A18" stroke-width="1.5" />
+          </g>
+
+          <!-- Floating Cloud & Rose Sun (Momenty emblem) -->
+          <g class="momenty-cloud-group">
+            <circle
+              class="momenty-sun"
+              cx="94"
+              cy="31"
+              r="11.5"
+              fill="#EBC5CF"
+              stroke="#1C1A18"
+              stroke-width="1.8"
+            />
+            <path
+              d="M52 53 H93 C99.5 53 102.5 47.8 100.5 42.5 C99 38.4 94.8 37.3 92 38.4 C89.8 30 81.5 25.8 74.2 29 C69 24.8 60.8 26.8 58.6 34.2 C52.4 34.6 47.2 39.4 47.6 45.6 C47.8 49.8 49.8 53 52 53 Z"
+              fill="#FAF8F5"
+              stroke="#1C1A18"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </g>
+
+          <!-- Open Journal Sheet with tactile offset shadow and animated ink lines -->
+          <g>
+            <!-- Paper shadow -->
+            <rect
+              x="41"
+              y="66"
+              width="70"
+              height="46"
+              rx="8"
+              fill="#EAE5DA"
+            />
+            <!-- Paper card -->
+            <rect
+              x="38"
+              y="63"
+              width="70"
+              height="46"
+              rx="8"
+              fill="#FAF8F5"
+              stroke="#1C1A18"
+              stroke-width="1.8"
+            />
+            <!-- Little green bookmark tab on top right of notebook -->
+            <path
+              d="M92 63 V76 L96.5 72.5 L101 76 V63 Z"
+              fill="#789A82"
+              stroke="#1C1A18"
+              stroke-width="1.5"
+              stroke-linejoin="round"
+            />
+            <!-- Animated handwriting ink lines -->
+            <line
+              class="momenty-ink-line-1"
+              x1="48"
+              y1="77"
+              x2="84"
+              y2="77"
+              stroke="#1C1A18"
+              stroke-width="1.8"
+              stroke-linecap="round"
+            />
+            <line
+              class="momenty-ink-line-2"
+              x1="48"
+              y1="86"
+              x2="82"
+              y2="86"
+              stroke="#1C1A18"
+              stroke-width="1.8"
+              stroke-linecap="round"
+            />
+            <line
+              class="momenty-ink-line-3"
+              x1="48"
+              y1="95"
+              x2="72"
+              y2="95"
+              stroke="#7A756D"
+              stroke-width="1.8"
+              stroke-linecap="round"
+            />
+            <!-- Small rose seal dot in bottom right corner of the card -->
+            <circle
+              cx="96"
+              cy="96"
+              r="4"
+              fill="#EBC5CF"
+              stroke="#1C1A18"
+              stroke-width="1.5"
+            />
+          </g>
+        </svg>
+
+        <p class="momenty-loader-title">Momenty</p>
+        <p class="momenty-loader-subtitle">Cicha kartka na dziś</p>
+        <div class="momenty-loader-bar-track" aria-hidden="true">
+          <div class="momenty-loader-bar-fill"></div>
+        </div>
+      </div>
+    </div>
+
     <div id="root">
-      <!-- Pre-rendered semantic HTML for search engine indexing and instant First Contentful Paint -->
-      <main class="max-w-5xl mx-auto px-6 py-14 font-serif">
+      <!-- Pre-rendered semantic HTML for search engine indexing -->
+      <main class="seo-prerender-fallback max-w-5xl mx-auto px-6 py-14 font-serif">
         <header class="mb-10 pb-6 border-b border-[#E5DFD3] flex items-center justify-between">
           <a href="/" class="text-xl font-semibold text-[#1C1A18]">Momenty / Moments</a>
           <nav aria-label="Główna nawigacja" class="flex items-center gap-5 text-xs">

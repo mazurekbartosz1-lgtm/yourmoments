@@ -47,6 +47,7 @@ import {
 } from '../data/prompts';
 import { encryptText, EncryptedPayload } from '../services/crypto';
 import { autoFixPolishText } from '../services/writingAssistant';
+import { generateLocalDynamicQuestionsForLang } from '../services/dynamicQuestions';
 import { usePWAInstall } from '../services/pwa';
 import { SparkleModal, SparkleAppreciationCard } from './SparkleModal';
 
@@ -193,7 +194,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [heroPromptsPool, setHeroPromptsPool] = useState(() => [
     DAILY_PROMPTS[0],
     DAILY_PROMPTS.find(p => p.slug === 'overcoming-burnout') || DAILY_PROMPTS[11],
-    DAILY_PROMPTS.find(p => p.slug === 'evening-gratitude') || DAILY_PROMPTS[1],
+    DAILY_PROMPTS.find(p => p.slug === 'daily-nature-respite') || DAILY_PROMPTS[2],
   ]);
   const [plgPromptIdx, setPlgPromptIdx] = useState<number>(0);
   const [plgRemainingRerolls, setPlgRemainingRerolls] = useState<number>(3);
@@ -207,14 +208,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [plgShowMarginHints, setPlgShowMarginHints] = useState<boolean>(true);
   const [plgMarginIdx, setPlgMarginIdx] = useState<number>(0);
   const [plgIsRotatingMargin, setPlgIsRotatingMargin] = useState<boolean>(false);
-
-  const marginFollowUpPool =
-    activeHeroSeo.followUpQuestions && activeHeroSeo.followUpQuestions.length > 0
-      ? activeHeroSeo.followUpQuestions
-      : [getHintText(activeHeroPrompt, lang)];
-  const currentPlgMarginQuestion =
-    marginFollowUpPool[plgMarginIdx % marginFollowUpPool.length] ||
-    getHintText(activeHeroPrompt, lang);
 
   const [plgDraft, setPlgDraft] = useState<string>(() => {
     if (typeof window === 'undefined') return '';
@@ -239,9 +232,29 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     return '';
   });
 
+  useEffect(() => {
+    setPlgMarginIdx(0);
+  }, [activeHeroPrompt.id, plgFreeThought]);
+
+  const dynamicMarginPool = generateLocalDynamicQuestionsForLang(
+    plgDraft,
+    getPromptText(activeHeroPrompt, lang),
+    lang
+  );
+  const marginFollowUpPool =
+    dynamicMarginPool && dynamicMarginPool.length > 0
+      ? dynamicMarginPool
+      : activeHeroSeo.followUpQuestions && activeHeroSeo.followUpQuestions.length > 0
+      ? activeHeroSeo.followUpQuestions
+      : [getHintText(activeHeroPrompt, lang)];
+  const currentPlgMarginQuestion =
+    marginFollowUpPool[plgMarginIdx % marginFollowUpPool.length] ||
+    getHintText(activeHeroPrompt, lang);
+
   const [plgWritingSeconds, setPlgWritingSeconds] = useState<number>(0);
   const [isPlgUserTyping, setIsPlgUserTyping] = useState<boolean>(false);
   const [isPlgListening, setIsPlgListening] = useState<boolean>(false);
+  const [plgSpeechError, setPlgSpeechError] = useState<string | null>(null);
   const [plgSpellStatus, setPlgSpellStatus] = useState<'idle' | 'fixed' | 'clean'>('idle');
   const [plgFixedCount, setPlgFixedCount] = useState<number>(0);
   const [plgPreviousContent, setPlgPreviousContent] = useState<string | null>(null);
@@ -249,6 +262,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const heroTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const plgTypingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const plgSpeechRef = useRef<any>(null);
+
+  useEffect(() => {
+    return () => {
+      if (plgSpeechRef.current) {
+        try {
+          plgSpeechRef.current.onend = null;
+          plgSpeechRef.current.stop();
+        } catch {
+          // ignore
+        }
+        plgSpeechRef.current = null;
+      }
+    };
+  }, []);
 
   const persistPlgDraft = (textVal: string, promptIdVal: string, secsVal: number) => {
     try {
@@ -513,17 +540,31 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
   const togglePlgDictation = () => {
     if (typeof window === 'undefined') return;
-    const SpeechRec =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRec) return;
 
     if (isPlgListening && plgSpeechRef.current) {
       try {
+        plgSpeechRef.current.onend = null;
         plgSpeechRef.current.stop();
       } catch {
         // ignore
       }
+      plgSpeechRef.current = null;
       setIsPlgListening(false);
+      return;
+    }
+
+    setPlgSpeechError(null);
+    const SpeechRec =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRec) {
+      setPlgSpeechError(
+        tr(
+          'Twoja przeglądarka nie obsługuje dyktowania głosem (użyj Chrome, Edge lub Safari).',
+          'Your browser does not support voice dictation (use Chrome, Edge, or Safari).',
+          'Tu navegador no admite dictado por voz (usa Chrome, Edge o Safari).',
+          'Votre navigateur ne prend pas en charge la dictée vocale (utilisez Chrome, Edge ou Safari).'
+        )
+      );
       return;
     }
 
@@ -533,6 +574,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         lang === 'en' ? 'en-US' : lang === 'es' ? 'es-ES' : lang === 'fr' ? 'fr-FR' : 'pl-PL';
       rec.interimResults = false;
       rec.continuous = false;
+      rec.onstart = () => {
+        setIsPlgListening(true);
+        setPlgSpeechError(null);
+      };
       rec.onresult = (event: any) => {
         const transcript = event?.results?.[0]?.[0]?.transcript;
         if (transcript && typeof transcript === 'string') {
@@ -540,10 +585,24 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           handlePlgDraftChange(`${plgDraft}${sep}${transcript.trim()}`);
         }
       };
-      rec.onerror = () => setIsPlgListening(false);
-      rec.onend = () => setIsPlgListening(false);
+      rec.onerror = (event: any) => {
+        if (event?.error === 'not-allowed' || event?.error === 'service-not-allowed') {
+          setPlgSpeechError(
+            tr(
+              'Brak dostępu do mikrofonu. Zezwól na mikrofon po kliknięciu „Dyktuj”.',
+              'Microphone access denied. Please allow microphone access when clicking “Dictate”.',
+              'Acceso al micrófono denegado. Permite el micrófono al pulsar «Dictar».',
+              'Accès au microphone refusé. Veuillez autoriser le microphone.'
+            )
+          );
+        }
+        setIsPlgListening(false);
+      };
+      rec.onend = () => {
+        plgSpeechRef.current = null;
+        setIsPlgListening(false);
+      };
       plgSpeechRef.current = rec;
-      setIsPlgListening(true);
       rec.start();
     } catch {
       setIsPlgListening(false);
@@ -765,24 +824,119 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     };
   }, []);
 
-  // Interactive 9-companion carousel & dropdown state — each day & each site visit a different animal assists you
-  const [showcaseCompanion, setShowcaseCompanion] = useState<CompanionId>(() => {
-    const randomIdx = Math.floor(Math.random() * COMPANIONS.length);
-    return COMPANIONS[randomIdx]?.id || 'crocodile';
-  });
+  // Always start with the Fox companion ('fox'); only update everything when the user changes companion
+  const [showcaseCompanion, setShowcaseCompanion] = useState<CompanionId>('fox');
   const [showcasePose, setShowcasePose] = useState<'typing' | 'reading' | 'searching'>('typing');
 
   const currentCompanionIndex = COMPANIONS.findIndex(c => c.id === showcaseCompanion);
+
+  const getCompanionCtaStyle = (
+    id: CompanionId
+  ): {
+    buttonClass: string;
+    activePillClass: string;
+    activeBorderLClass: string;
+    iconClass: string;
+    sealFill: string;
+  } => {
+    switch (id) {
+      case 'crocodile':
+        return {
+          buttonClass: 'bg-[#789A82] hover:bg-[#698B73] text-[#1C1A18] border-[#1C1A18]',
+          activePillClass: 'bg-[#789A82] hover:bg-[#698B73] text-[#1C1A18]',
+          activeBorderLClass: 'border-l-[#789A82]',
+          iconClass: 'text-[#1C1A18]',
+          sealFill: '#EBC5CF',
+        };
+      case 'wolf':
+        return {
+          buttonClass: 'bg-[#8D959E] hover:bg-[#7D858E] text-[#1C1A18] border-[#1C1A18]',
+          activePillClass: 'bg-[#8D959E] hover:bg-[#7D858E] text-[#1C1A18]',
+          activeBorderLClass: 'border-l-[#8D959E]',
+          iconClass: 'text-[#1C1A18]',
+          sealFill: '#EBC5CF',
+        };
+      case 'axolotl':
+        return {
+          buttonClass: 'bg-[#EBC5CF] hover:bg-[#DFB4C0] text-[#1C1A18] border-[#1C1A18]',
+          activePillClass: 'bg-[#EBC5CF] hover:bg-[#DFB4C0] text-[#1C1A18]',
+          activeBorderLClass: 'border-l-[#EBC5CF]',
+          iconClass: 'text-[#8B2635]',
+          sealFill: '#FAF8F5',
+        };
+      case 'bear':
+        return {
+          buttonClass: 'bg-[#A6836C] hover:bg-[#95725B] text-[#FAF8F5] border-[#1C1A18]',
+          activePillClass: 'bg-[#A6836C] hover:bg-[#95725B] text-[#FAF8F5]',
+          activeBorderLClass: 'border-l-[#A6836C]',
+          iconClass: 'text-[#FAF8F5]',
+          sealFill: '#EBC5CF',
+        };
+      case 'panda':
+        return {
+          buttonClass: 'bg-[#FAF8F5] hover:bg-[#EAE5DA] text-[#1C1A18] border-[#1C1A18]',
+          activePillClass: 'bg-[#524D46] hover:bg-[#3D3831] text-[#FAF8F5]',
+          activeBorderLClass: 'border-l-[#524D46]',
+          iconClass: 'text-[#8B2635]',
+          sealFill: '#EBC5CF',
+        };
+      case 'dragon':
+        return {
+          buttonClass: 'bg-[#6C9A96] hover:bg-[#5B8985] text-[#1C1A18] border-[#1C1A18]',
+          activePillClass: 'bg-[#6C9A96] hover:bg-[#5B8985] text-[#1C1A18]',
+          activeBorderLClass: 'border-l-[#6C9A96]',
+          iconClass: 'text-[#1C1A18]',
+          sealFill: '#EBC5CF',
+        };
+      case 'cat':
+      case 'dinosaur':
+        return {
+          buttonClass: 'bg-[#C8B89E] hover:bg-[#B8A78C] text-[#1C1A18] border-[#1C1A18]',
+          activePillClass: 'bg-[#C8B89E] hover:bg-[#B8A78C] text-[#1C1A18]',
+          activeBorderLClass: 'border-l-[#C8B89E]',
+          iconClass: 'text-[#1C1A18]',
+          sealFill: '#EBC5CF',
+        };
+      case 'fox':
+      case 'lizard':
+        return {
+          buttonClass: 'bg-[#C96839] hover:bg-[#B5592C] text-[#FAF8F5] border-[#1C1A18]',
+          activePillClass: 'bg-[#C96839] hover:bg-[#B5592C] text-[#FAF8F5]',
+          activeBorderLClass: 'border-l-[#C96839]',
+          iconClass: 'text-[#FAF8F5]',
+          sealFill: '#EBC5CF',
+        };
+      case 'bird':
+        return {
+          buttonClass: 'bg-[#1C1A18] hover:bg-[#33302B] text-[#FAF8F5] border-[#1C1A18]',
+          activePillClass: 'bg-[#1C1A18] hover:bg-[#33302B] text-[#FAF8F5]',
+          activeBorderLClass: 'border-l-[#1C1A18]',
+          iconClass: 'text-[#EBC5CF]',
+          sealFill: '#EBC5CF',
+        };
+    }
+  };
+
+  const companionCta = getCompanionCtaStyle(showcaseCompanion);
   const currentCompanionInfo = COMPANIONS[currentCompanionIndex] || COMPANIONS[0];
+
+  const handleSelectShowcaseCompanion = (nextId: CompanionId) => {
+    setShowcaseCompanion(nextId);
+    try {
+      localStorage.setItem('kronika_companion', nextId);
+    } catch {
+      // ignore
+    }
+  };
 
   const handlePrevCompanion = () => {
     const prevIdx = (currentCompanionIndex - 1 + COMPANIONS.length) % COMPANIONS.length;
-    setShowcaseCompanion(COMPANIONS[prevIdx].id);
+    handleSelectShowcaseCompanion(COMPANIONS[prevIdx].id);
   };
 
   const handleNextCompanion = () => {
     const nextIdx = (currentCompanionIndex + 1) % COMPANIONS.length;
-    setShowcaseCompanion(COMPANIONS[nextIdx].id);
+    handleSelectShowcaseCompanion(COMPANIONS[nextIdx].id);
   };
 
   // Smart Hints & Prompt Category explorer state
@@ -1078,14 +1232,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
           {/* Compact Right Header Controls */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={() => scrollToSection('flow-section')}
-              className="hidden sm:inline-flex h-7 px-2.5 rounded-md border border-[#E2DDD3] bg-[#F5F2EB] hover:bg-[#EAE5DA] text-[11px] font-mono-meta text-[#524D46] hover:text-[#1C1A18] items-center gap-1 transition-colors cursor-pointer"
-            >
-              <Sparkles className="w-3 h-3 text-[#8B2635]" />
-              <span>{tr('Jak to działa ↓', 'How it works ↓', 'Cómo funciona ↓', 'Comment ça marche ↓')}</span>
-            </button>
 
             <button
               type="button"
@@ -1156,7 +1302,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                         }}
                         className={`w-full px-2.5 py-1.5 rounded text-left flex items-center justify-between transition-colors cursor-pointer ${
                           lang === item.code
-                            ? 'bg-[#1C1A18] text-[#FAF8F5] font-medium'
+                            ? `${companionCta.activePillClass} font-medium`
                             : 'text-[#524D46] hover:bg-[#EFECE4] hover:text-[#1C1A18]'
                         }`}
                       >
@@ -1173,7 +1319,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <button
                 type="button"
                 onClick={onReturnToEditor}
-                className="h-7 px-2.5 text-[11px] font-mono-meta font-medium text-[#FAF8F5] bg-[#1C1A18] hover:bg-[#33302B] rounded-md transition-colors inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
+                className={`h-7 px-2.5 text-[11px] font-mono-meta font-medium ${companionCta.activePillClass} rounded-md transition-colors inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer`}
               >
                 {userPhotoURL ? (
                   <img
@@ -1334,7 +1480,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <button
                 type="button"
                 onClick={() => setShowInstallGuideModal(false)}
-                className="px-4 py-2 rounded-lg bg-[#1C1A18] text-[#FAF8F5] text-xs font-mono-meta cursor-pointer hover:bg-[#33302B] transition-colors"
+                className={`px-4 py-2 rounded-lg ${companionCta.activePillClass} text-xs font-mono-meta cursor-pointer transition-colors`}
               >
                 {tr('Rozumiem', 'Got it', 'Entendido', 'Compris')}
               </button>
@@ -1396,7 +1542,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                         }}
                         className={`w-full px-2.5 py-2 rounded-md text-left flex items-center justify-between transition-colors cursor-pointer ${
                           lang === item.code
-                            ? 'bg-[#1C1A18] text-[#FAF8F5] font-medium'
+                            ? `${companionCta.activePillClass} font-medium`
                             : 'text-[#524D46] hover:bg-[#EFECE4] hover:text-[#1C1A18]'
                         }`}
                       >
@@ -1447,7 +1593,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 type="button"
                 onClick={onReturnToEditor || onGoogleLogin}
                 disabled={isAuthLoading}
-                className="min-h-[42px] px-7 py-2.5 rounded-lg bg-[#1C1A18] hover:bg-[#33302B] text-[#FAF8F5] text-xs font-mono-meta uppercase tracking-widest inline-flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs disabled:opacity-60"
+                className={`min-h-[42px] px-7 py-2.5 rounded-lg ${companionCta.activePillClass} text-xs font-mono-meta uppercase tracking-widest inline-flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs disabled:opacity-60`}
               >
                 {onReturnToEditor && userName ? (
                   <>
@@ -1583,7 +1729,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   type="button"
                   onClick={onGoogleLogin}
                   disabled={isAuthLoading}
-                  className="w-full py-3.5 px-5 rounded-xl bg-[#1C1A18] hover:bg-[#33302B] text-[#FAF8F5] text-xs sm:text-sm font-mono-meta font-medium flex items-center justify-center gap-2.5 transition-all cursor-pointer disabled:opacity-60"
+                  className={`w-full py-3.5 px-5 rounded-xl ${companionCta.activePillClass} text-xs sm:text-sm font-mono-meta font-medium flex items-center justify-center gap-2.5 transition-all cursor-pointer disabled:opacity-60`}
                 >
                   <Lock className="w-4 h-4 text-[#EBC5CF]" />
                   <span>
@@ -1617,12 +1763,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         )}
 
         {/* =====================================================================
-            1. FIRST SCREEN: COMPACT LOGGED-IN STYLE WRITING AREA (PEEKING FIRST SECTION BELOW)
+            1. FIRST SCREEN: ~3/4 SCREEN LOGGED-IN STYLE WRITING AREA (WITH FULL HEADER OF SECTION 01 VISIBLE BELOW)
            ===================================================================== */}
-        <section className="flex flex-col justify-between w-full text-left relative pt-0 pb-4 sm:pb-6">
+        <section className="min-h-[68vh] sm:min-h-[70vh] flex flex-col justify-between w-full text-left relative pt-0 pb-3.5 sm:pb-4">
           {/* Pinned Top Dock: Daily Question + Action Toolbar + Mobile Follow-up Question */}
           <div className="w-full bg-[#F7F5F0]/95 border-b border-[#EAE5DA]/85 select-none">
-            <div className="max-w-2xl mx-auto w-full px-3 sm:px-8 pt-2.5 sm:pt-4 pb-2 space-y-2 sm:space-y-2.5">
+            <div className="max-w-2xl mx-auto w-full px-3 sm:px-8 pt-2.5 sm:pt-3.5 pb-2.5 space-y-2 sm:space-y-2.5">
               {/* Main Question OR Free Thought Header */}
               <div className="w-full select-none shrink-0">
                 {plgFreeThought ? (
@@ -1658,16 +1804,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 )}
               </div>
 
-              {/* Action Row matching FocusEditor.tsx */}
+              {/* Action Row: Dyktuj + [< | Wymień (3/3) | >] + Wolna myśl */}
               <div className="w-full space-y-2 select-none">
                 <div className="w-full flex flex-nowrap items-center justify-between gap-2 min-w-0">
-                  {/* Left side: Dyktuj, B/I, Popraw pisownię */}
+                  {/* Left side: Dyktuj */}
                   <div className="flex flex-nowrap items-center gap-1.5 text-[11px] sm:text-xs font-mono-meta shrink-0">
                     <button
                       type="button"
                       onMouseDown={e => e.preventDefault()}
                       onClick={togglePlgDictation}
-                      className={`flex transition-colors items-center justify-center gap-1.5 px-2 sm:px-2.5 h-7 sm:min-h-[30px] rounded text-[11px] sm:text-xs font-mono-meta border cursor-pointer whitespace-nowrap shrink-0 ${
+                      className={`flex transition-colors items-center justify-center gap-1.5 px-2.5 sm:px-3 h-7 sm:min-h-[30px] rounded text-[11px] sm:text-xs font-mono-meta border cursor-pointer whitespace-nowrap shrink-0 ${
                         isPlgListening
                           ? 'bg-[#8B2635] border-[#8B2635] text-[#FAF8F5]'
                           : 'bg-[#F5F2EB] hover:bg-[#EAE5DA] border-[#DDD6C8] text-[#524D46] hover:text-[#1C1A18]'
@@ -1690,100 +1836,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       ) : (
                         <>
                           <Mic className="w-3.5 h-3.5 text-[#8B2635] shrink-0" />
-                          <span className="hidden sm:inline">
+                          <span>
                             {tr('Dyktuj', 'Dictate', 'Dictar', 'Dicter')}
-                          </span>
-                        </>
-                      )}
-                    </button>
-
-                    {/* Bold (*tekst*) & Italic (_tekst_) */}
-                    <div className="flex items-center rounded border border-[#DDD6C8] bg-[#F5F2EB] divide-x divide-[#DDD6C8] overflow-hidden shrink-0 h-7 sm:min-h-[30px]">
-                      <button
-                        type="button"
-                        onMouseDown={e => e.preventDefault()}
-                        onClick={() => applyPlgFormatting('bold')}
-                        title={tr(
-                          'Pogrubienie — wpisz *tekst* lub zaznacz słowa i kliknij B',
-                          'Bold — type *text* or select words and click B',
-                          'Negrita — escribe *texto* o selecciona palabras y pulsa B',
-                          'Gras — tapez *texte* ou sélectionnez des mots et cliquez sur B'
-                        )}
-                        className="px-2 h-full font-serif-literary font-bold text-[11px] sm:text-xs text-[#524D46] hover:bg-[#EAE5DA] hover:text-[#1C1A18] transition-colors cursor-pointer"
-                      >
-                        B
-                      </button>
-                      <button
-                        type="button"
-                        onMouseDown={e => e.preventDefault()}
-                        onClick={() => applyPlgFormatting('italic')}
-                        title={tr(
-                          'Kursywa — wpisz _tekst_ lub zaznacz słowa i kliknij I',
-                          'Italic — type _text_ or select words and click I',
-                          'Cursiva — escribe _texto_ o selecciona palabras y pulsa I',
-                          'Italique — tapez _texte_ ou sélectionnez des mots et cliquez sur I'
-                        )}
-                        className="px-2 h-full font-serif-literary italic text-[11px] sm:text-xs text-[#524D46] hover:bg-[#EAE5DA] hover:text-[#1C1A18] transition-colors cursor-pointer"
-                      >
-                        I
-                      </button>
-                    </div>
-
-                    {/* Popraw pisownię */}
-                    <button
-                      type="button"
-                      onMouseDown={e => e.preventDefault()}
-                      onClick={handlePlgAutoFixSpelling}
-                      disabled={plgDraft.trim().length <= 2}
-                      className={`transition-colors flex items-center justify-center gap-1.5 px-2 sm:px-2.5 h-7 sm:min-h-[30px] rounded text-[11px] sm:text-xs font-mono-meta border whitespace-nowrap shrink-0 ${
-                        plgDraft.trim().length <= 2
-                          ? 'bg-[#F5F2EB]/60 border-[#EAE5DA] text-[#ABA497] cursor-not-allowed opacity-65'
-                          : plgSpellStatus === 'fixed'
-                          ? 'bg-[#EBF2EB] border-[#CCE2CC] text-[#2E5C33] cursor-pointer'
-                          : plgSpellStatus === 'clean'
-                          ? 'bg-[#EFECE4] border-[#DDD6C8] text-[#524D46] cursor-pointer'
-                          : 'bg-[#F5F2EB] hover:bg-[#EAE5DA] border-[#DDD6C8] text-[#524D46] hover:text-[#1C1A18] cursor-pointer'
-                      }`}
-                      title={tr(
-                        'Automatycznie poprawia literówki i polskie znaki bez zmiany znaczenia zdań',
-                        'Automatically fixes typos and spelling without changing sentence meaning',
-                        'Corrige automáticamente errores ortográficos',
-                        'Corrige automatiquement les fautes d’orthographe'
-                      )}
-                    >
-                      {plgSpellStatus === 'fixed' ? (
-                        <>
-                          <Check className="w-3.5 h-3.5 text-[#2E5C33] shrink-0" />
-                          <span className="sm:hidden tabular-nums">{plgFixedCount}</span>
-                          <span className="hidden sm:inline">
-                            {tr(`Poprawiono (${plgFixedCount})`, `Fixed (${plgFixedCount})`, `Corregido (${plgFixedCount})`, `Corrigé (${plgFixedCount})`)}
-                          </span>
-                          {plgPreviousContent !== null && (
-                            <span
-                              onMouseDown={e => e.preventDefault()}
-                              onClick={e => {
-                                e.stopPropagation();
-                                handlePlgUndoFix();
-                              }}
-                              className="ml-0.5 sm:ml-1 underline font-semibold hover:text-[#142A17] cursor-pointer"
-                            >
-                              {tr('(Cofnij)', '(Undo)', '(Deshacer)', '(Annuler)')}
-                            </span>
-                          )}
-                        </>
-                      ) : plgSpellStatus === 'clean' ? (
-                        <>
-                          <Check className="w-3.5 h-3.5 text-[#2E5C33] shrink-0" />
-                          <span className="sm:hidden">OK</span>
-                          <span className="hidden sm:inline">
-                            {tr('Brak literówek', 'No typos', 'Sin errores', 'Aucune faute')}
-                          </span>
-                        </>
-                      ) : (
-                        <>
-                          <Wand2 className="w-3.5 h-3.5 text-[#3E7B44] shrink-0" />
-                          <span className="hidden sm:inline">
-                            {tr('Popraw pisownię', 'Fix spelling', 'Corregir', 'Corriger')}
                           </span>
                         </>
                       )}
@@ -1897,13 +1951,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       }}
                       className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 h-7 sm:min-h-[30px] rounded text-[11px] sm:text-xs font-mono-meta border transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
                         plgFreeThought
-                          ? 'border-[#1C1A18] bg-[#EAE5DA] text-[#1C1A18] font-medium'
+                          ? `${companionCta.activePillClass} border-transparent font-medium`
                           : 'border-[#DDD6C8] bg-[#F5F2EB] hover:bg-[#EAE5DA] text-[#524D46] hover:text-[#1C1A18]'
                       }`}
                     >
                       <svg
                         viewBox="0 0 18 18"
-                        className="w-3.5 h-3.5 shrink-0 text-[#8B2635]"
+                        className={`w-3.5 h-3.5 shrink-0 ${plgFreeThought ? 'text-current' : 'text-[#8B2635]'}`}
                         fill="none"
                         stroke="currentColor"
                         strokeWidth="1.5"
@@ -1927,6 +1981,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     </button>
                   </div>
                 </div>
+
+                {plgSpeechError && (
+                  <div className="text-[11px] font-mono-meta text-[#8B2635] pt-0.5">
+                    {plgSpeechError}
+                  </div>
+                )}
 
                 {/* Mobile & Tablet Follow-up Question (pytanie pomocnicze) inside top dock */}
                 <div className="lg:hidden pt-0.5">
@@ -2005,7 +2065,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
           {/* Centered Writing Area + Desktop Left Margin Question */}
           <div className="flex-1 flex flex-col w-full">
-            <div className="max-w-2xl mx-auto w-full px-4 sm:px-8 pt-3 sm:pt-4 pb-4 space-y-3.5 flex-1 flex flex-col">
+            <div className="max-w-2xl mx-auto w-full px-4 sm:px-8 pt-2.5 sm:pt-3.5 pb-2 space-y-3 flex-1 flex flex-col">
               {authError && (
                 <div className="p-3 rounded-lg bg-[#FDF2F2] border border-[#E8C5C5] text-xs font-mono-meta text-[#8B2635] flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0" />
@@ -2088,7 +2148,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </aside>
 
                 {/* Main Paper Textarea with Live Rich Formatting Backdrop (matching FocusEditor) */}
-                <div className="relative w-full pb-2">
+                <div className="relative w-full pb-1">
                   {/* Visible formatted backdrop layer */}
                   <div
                     aria-hidden="true"
@@ -2124,7 +2184,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                             'Dites ce que vous avez en tête...'
                           )
                     }
-                    className={`editor-sync-layer relative z-10 w-full min-h-[105px] sm:min-h-[125px] bg-transparent border-0 outline-none resize-none text-lg sm:text-xl leading-relaxed placeholder-[#B5B0A6] focus:ring-0 p-0 m-0 text-left selection:bg-[#E2DDD3]/50 ${
+                    className={`editor-sync-layer relative z-10 w-full min-h-[155px] sm:min-h-[185px] lg:min-h-[205px] bg-transparent border-0 outline-none resize-none text-lg sm:text-xl leading-relaxed placeholder-[#B5B0A6] focus:ring-0 p-0 m-0 text-left selection:bg-[#E2DDD3]/50 ${
                       plgDraft ? 'text-transparent caret-[#1C1A18]' : 'text-[#1C1A18]'
                     }`}
                   />
@@ -2134,17 +2194,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
 
           {/* Bottom Section: Prominent Primary CTA "Zamknij dzień i załóż konto" + CompanionDesk + 2-line Footer */}
-          <div className="w-full overflow-x-hidden flex flex-col items-center shrink-0 mt-1 sm:mt-2 pt-1">
-            {/* Prominent Centered Primary CTA Button above the horizontal line */}
-            <div className="max-w-2xl mx-auto w-full px-2.5 sm:px-8 flex flex-col items-center pb-3 select-none">
+          <div className="w-full overflow-x-hidden flex flex-col items-center shrink-0 mt-1 pt-0.5">
+            {/* Prominent Centered Primary CTA Button in the active Animal Companion's color */}
+            <div className="max-w-2xl mx-auto w-full px-2.5 sm:px-8 flex flex-col items-center pb-2.5 select-none">
               <button
                 type="button"
                 onClick={handleSaveEntryTrigger}
-                className="group/seal relative overflow-hidden flex items-center justify-center gap-2.5 px-6 sm:px-8 py-3 sm:py-3.5 rounded-xl border border-[#1C1A18] bg-[#1C1A18] hover:bg-[#33302B] text-[#FAF8F5] text-xs sm:text-sm font-mono-meta font-medium transition-all cursor-pointer select-none shadow-sm"
+                className={`group/seal relative overflow-hidden flex items-center justify-center gap-2.5 px-6 sm:px-8 py-2.5 sm:py-3 rounded-xl border text-xs sm:text-sm font-mono-meta font-medium transition-all duration-300 cursor-pointer select-none shadow-sm ${companionCta.buttonClass}`}
               >
                 <svg
                   viewBox="0 0 18 18"
-                  className="relative z-10 w-4 h-4 shrink-0 text-[#EBC5CF] transition-colors"
+                  className={`relative z-10 w-4 h-4 shrink-0 transition-colors ${companionCta.iconClass}`}
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="1.6"
@@ -2154,7 +2214,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 >
                   <rect x="2" y="3.5" width="14" height="11" rx="1.8" />
                   <path d="M2.5 4.5 L9 9.5 L15.5 4.5" />
-                  <circle cx="9" cy="10" r="1.6" fill="#EBC5CF" stroke="currentColor" strokeWidth="1.2" />
+                  <circle cx="9" cy="10" r="1.6" fill={companionCta.sealFill} stroke="currentColor" strokeWidth="1.2" />
                 </svg>
 
                 <span className="relative z-10">
@@ -2168,12 +2228,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       )}
                 </span>
 
-                <ArrowRight className="w-4 h-4 text-[#EBC5CF] shrink-0 transition-transform group-hover/seal:translate-x-0.5" />
+                <ArrowRight className={`w-4 h-4 shrink-0 transition-transform group-hover/seal:translate-x-0.5 ${companionCta.iconClass}`} />
               </button>
             </div>
 
             {/* CompanionDesk + 2-line footer */}
-            <div className="max-w-2xl mx-auto w-full px-2.5 sm:px-8 flex flex-col items-center select-none border-t border-[#EAE5DA]/70 pt-2.5">
+            <div className="max-w-2xl mx-auto w-full px-2.5 sm:px-8 flex flex-col items-center select-none border-t border-[#EAE5DA]/70 pt-2">
               <div className="w-full flex flex-col items-center mb-1">
                 <CompanionDesk
                   companionId={showcaseCompanion}
@@ -2186,7 +2246,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </div>
 
               {/* Two-line footer & navigation bar directly below the animal companion */}
-              <div className="w-full flex flex-col items-center gap-2 text-xs font-mono-meta text-[#7A756D] py-0.5">
+              <div className="w-full flex flex-col items-center gap-1.5 text-xs font-mono-meta text-[#7A756D] py-0.5">
                 {/* Line 1: Live Writing Statistics */}
                 <div className="tabular-nums flex flex-wrap items-center justify-center gap-2 text-[11px] sm:text-xs">
                   <span
@@ -2218,17 +2278,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   )}
                 </div>
 
-                {/* Line 2: Quick Tabs matching FocusEditor (Stars graphic icon only + Dziennik + Statystyki + Klucz + Dzielenie się) */}
+                {/* Line 2: Quick Tabs matching FocusEditor (Stars icon -> appreciation-section, Dziennik, Statystyki, Klucz, Share icon -> share-section) */}
                 <div className="w-full flex flex-wrap items-center justify-center gap-1.5 sm:gap-2.5 text-[11px] sm:text-xs">
                   <button
                     type="button"
-                    onClick={() => setShowDemoSparkleModal(true)}
+                    onClick={() => scrollToSection('appreciation-section')}
                     aria-label={tr('Karta docenienia', 'Appreciation card', 'Tarjeta de aprecio', 'Carte d’appréciation')}
                     title={tr(
-                      'Zobacz przykładową kartę docenienia ostatnich dni',
-                      'Preview an appreciation card of recent days',
-                      'Ver ejemplo de tarjeta de aprecio',
-                      'Voir un exemple de carte d’appréciation'
+                      'Przejdź do sekcji: Ciepłe spojrzenie na ostatnie dni',
+                      'Go to section: Warm reflection on recent days',
+                      'Ir a la sección: Mirada cálida a tus últimos días',
+                      'Aller à la section : Regard chaleureux sur vos derniers jours'
                     )}
                     className="relative flex items-center justify-center px-2 py-1 rounded border border-[#DDD6C8] bg-[#F5F2EB] hover:bg-[#EAE5DA] text-[#8B2635] cursor-pointer transition-colors shrink-0"
                   >
@@ -2262,10 +2322,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <button
                     type="button"
                     onClick={() => scrollToSection('share-section')}
-                    className="px-2.5 py-1 rounded border border-[#DDD6C8] bg-[#F5F2EB] hover:bg-[#EAE5DA] text-[#524D46] hover:text-[#1C1A18] transition-colors cursor-pointer inline-flex items-center gap-1 shrink-0"
+                    aria-label={tr('Dzielenie się myślą', 'Share a moment', 'Compartir', 'Partager')}
+                    title={tr(
+                      'Przejdź do sekcji: Dzielenie się z bliskimi (jednorazowy link z PIN-em)',
+                      'Go to section: Sharing with loved ones (one-time PIN link)',
+                      'Ir a la sección: Compartir con los tuyos',
+                      'Aller à la section : Partager avec vos proches'
+                    )}
+                    className="relative flex items-center justify-center px-2 py-1 rounded border border-[#DDD6C8] bg-[#F5F2EB] hover:bg-[#EAE5DA] text-[#2E5C33] cursor-pointer transition-colors shrink-0"
                   >
-                    <Share2 className="w-3 h-3 text-[#8B2635]" />
-                    <span>{tr('Dzielenie się myślą ↓', 'Share a moment ↓', 'Compartir ↓', 'Partager ↓')}</span>
+                    <Share2 className="w-3.5 h-3.5 text-[#2E5C33]" />
                   </button>
                 </div>
               </div>
@@ -2274,22 +2340,42 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </section>
 
         {/* 2. SCROLL-DRIVEN STEP-BY-STEP FLOW — With Hanging Lightbulb Illustration */}
-        <section id="flow-section" className="border-t border-[#E5DFD3] bg-[#F3EFE7]/55 py-16 md:py-24">
+        <section id="flow-section" className="border-t border-[#E5DFD3] bg-[#F3EFE7]/55 pt-7 pb-16 md:pt-8 md:pb-24">
           <div className="max-w-6xl mx-auto px-6">
             <div className="flex flex-wrap items-end justify-between gap-6 mb-10">
-              <div className="max-w-xl space-y-2">
-                <div className="text-xs font-mono-meta text-[#7A756D]">
-                  {tr(
-                    '01 · Jak to działa',
-                    '01 · How it works',
-                    '01 · Cómo funciona',
-                    '01 · Comment ça marche'
-                  )}
+              <div className="space-y-2">
+                <div className="inline-flex items-center gap-2 text-xs font-mono-meta text-[#7A756D]">
+                  {/* Hand-drawn Open Journal / Ritual Icon */}
+                  <svg
+                    viewBox="0 0 24 20"
+                    className="w-5 h-4 shrink-0 overflow-visible"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M12 4 C9 2.5 5 2.5 2 4 L2 16 C5 14.5 9 14.5 12 16 C15 14.5 19 14.5 22 16 L22 4 C19 2.5 15 2.5 12 4 Z"
+                      fill="#FAF8F5"
+                      stroke="#1C1A18"
+                      strokeWidth="1.5"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d="M12 4 L12 16"
+                      stroke="#1C1A18"
+                      strokeWidth="1.4"
+                      strokeLinecap="round"
+                    />
+                    <circle cx="17.5" cy="8.5" r="2.2" fill="#EBC5CF" stroke="#8B2635" strokeWidth="1.2" />
+                  </svg>
+                  <span>
+                    {tr(
+                      '01 · Jak to działa',
+                      '01 · How it works',
+                      '01 · Cómo funciona',
+                      '01 · Comment ça marche'
+                    )}
+                  </span>
                 </div>
-                <h2
-                  className="text-3xl sm:text-4xl font-serif-literary text-[#1C1A18] leading-tight"
-                  style={{ textWrap: 'balance' }}
-                >
+                <h2 className="text-2xl sm:text-4xl font-serif-literary text-[#1C1A18] leading-tight sm:whitespace-nowrap">
                   {tr(
                     'Cztery chwile codziennego rytuału.',
                     'Four moments of the daily ritual.',
@@ -2299,21 +2385,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </h2>
               </div>
 
-              {/* Hanging Lightbulb & Cloud Line-Art Illustration placed in this section */}
+              {/* Hanging Lightbulb Line-Art Illustration (without cloud) */}
               <svg
-                viewBox="0 0 120 68"
-                className="w-28 h-16 shrink-0 overflow-visible"
+                viewBox="68 0 48 64"
+                className="w-12 h-16 shrink-0 overflow-visible"
                 aria-hidden="true"
               >
-                {/* Flat-bottomed cloud */}
-                <path
-                  d="M10 46 H58 C62 46 65 42.5 64 38 C63 35 59.5 34 57 34.5 C55.5 28 49 24.5 42.5 26.5 C39 22 31.5 23 29 28.5 C23 28 18 32 18 37.5 C13.5 38 11 41 11.5 44 C11.8 45 11 46 10 46 Z"
-                  fill="#FAF8F5"
-                  stroke="#1C1A18"
-                  strokeWidth="1.7"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
                 {/* Hanging cord + lightbulb */}
                 <line
                   x1="92"
@@ -2360,9 +2437,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </svg>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
               {/* Left Column: 4 Concise Steps */}
-              <div className="lg:col-span-5 space-y-3">
+              <div className="lg:col-span-5 flex flex-col justify-between gap-3">
                 {[
                   {
                     num: '01.',
@@ -2435,7 +2512,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       onClick={() => setActiveStep(index)}
                       className={`p-5 rounded-lg transition-all cursor-pointer border-l-2 ${
                         isCurrent
-                          ? 'bg-[#FAF8F5] border-l-[#1C1A18]'
+                          ? `bg-[#FAF8F5] ${companionCta.activeBorderLClass}`
                           : 'bg-transparent border-l-[#DED8CC] hover:bg-[#FAF8F5]/60 opacity-75 hover:opacity-100'
                       }`}
                     >
@@ -2455,11 +2532,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 })}
               </div>
 
-              {/* Right Column: Sticky Interactive Stage responding to activeStep */}
-              <div className="lg:col-span-7 lg:sticky lg:top-24">
-                <div className="bg-[#FAF8F5] border border-[#E5DFD3] rounded-xl overflow-hidden">
+              {/* Right Column: Interactive Stage matching the full height of the 4 steps on the left */}
+              <div className="lg:col-span-7 flex flex-col">
+                <div className="bg-[#FAF8F5] border border-[#E5DFD3] rounded-xl overflow-hidden flex-1 flex flex-col h-full">
                   {/* Step Selector Tabs */}
-                  <div className="flex items-center justify-between px-5 py-3 bg-[#F2EFE8] border-b border-[#E5DFD3] gap-2 overflow-x-auto">
+                  <div className="flex items-center justify-between px-5 py-3 bg-[#F2EFE8] border-b border-[#E5DFD3] gap-2 overflow-x-auto shrink-0">
                     <div className="flex items-center gap-1.5">
                       {[
                         {
@@ -2497,7 +2574,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                           onClick={() => setActiveStep(tab.idx)}
                           className={`px-3 py-1.5 rounded-md text-xs font-mono-meta transition-colors whitespace-nowrap shrink-0 cursor-pointer tabular-nums ${
                             activeStep === tab.idx
-                              ? 'bg-[#1C1A18] text-[#FAF8F5] font-medium'
+                              ? `${companionCta.activePillClass} font-medium`
                               : 'text-[#524D46] hover:text-[#1C1A18] hover:bg-[#E6E1D6]'
                           }`}
                         >
@@ -2508,7 +2585,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   </div>
 
                   {/* Stage Content */}
-                  <div className="p-6 sm:p-8 min-h-[420px] flex flex-col justify-between">
+                  <div className="p-6 sm:p-8 flex-1 flex flex-col justify-between">
                     {/* STEP 0: Question & Cursor-Aligned Margin Eye */}
                     {activeStep === 0 && (
                       <div className="flex-1 flex flex-col justify-between space-y-5 animate-in fade-in duration-150">
@@ -2642,10 +2719,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                               <button
                                 key={comp.id}
                                 type="button"
-                                onClick={() => setShowcaseCompanion(comp.id)}
+                                onClick={() => handleSelectShowcaseCompanion(comp.id)}
                                 className={`px-2.5 py-1 rounded text-xs font-mono-meta transition-colors cursor-pointer whitespace-nowrap ${
                                   showcaseCompanion === comp.id
-                                    ? 'bg-[#1C1A18] text-[#FAF8F5]'
+                                    ? companionCta.activePillClass
                                     : 'bg-[#F2EFE8] text-[#524D46] hover:bg-[#EAE5DA]'
                                 }`}
                               >
@@ -2672,7 +2749,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                           <button
                             type="button"
                             onClick={() => setActiveStep(3)}
-                            className="px-3.5 py-1.5 rounded-md bg-[#1C1A18] text-[#FAF8F5] text-xs font-mono-meta whitespace-nowrap shrink-0 cursor-pointer hover:bg-[#33302B] transition-colors"
+                            className={`px-3.5 py-1.5 rounded-md ${companionCta.activePillClass} text-xs font-mono-meta whitespace-nowrap shrink-0 cursor-pointer transition-colors`}
                           >
                             {tr(
                               'Otwórz Dziennik →',
@@ -2754,7 +2831,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                                     onClick={() => hasEntry && setSelectedArchiveDay(day)}
                                     className={`h-8 w-8 mx-auto rounded-full flex items-center justify-center transition-all ${
                                       isSelected
-                                        ? 'bg-[#1C1A18] text-[#FAF8F5] font-semibold cursor-pointer'
+                                        ? `${companionCta.activePillClass} font-semibold cursor-pointer`
                                         : hasEntry
                                         ? 'border border-[#1C1A18] text-[#1C1A18] font-medium hover:bg-[#EAE5DA] cursor-pointer'
                                         : 'text-[#B8B0A0] cursor-default'
@@ -2807,13 +2884,31 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         <section id="hints-section" className="border-t border-[#E5DFD3] bg-[#F3EFE7]/55 py-16 md:py-24">
           <div className="max-w-6xl mx-auto px-6">
             <div className="max-w-xl space-y-2 mb-10">
-              <div className="text-xs font-mono-meta text-[#7A756D]">
-                {tr(
-                  '02 · Pytania i Margines',
-                  '02 · Prompts & Margin',
-                  '02 · Preguntas y Margen',
-                  '02 · Questions et Marge'
-                )}
+              <div className="inline-flex items-center gap-2 text-xs font-mono-meta text-[#7A756D]">
+                {/* Hand-drawn Fountain Pen Nib & Margin Icon */}
+                <svg
+                  viewBox="0 0 24 20"
+                  className="w-5 h-4 shrink-0 overflow-visible"
+                  aria-hidden="true"
+                >
+                  <line x1="3" y1="2" x2="3" y2="18" stroke="#8B2635" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="2.5 2.5" />
+                  <path
+                    d="M20 2 C15 2 10 6 8 13 L7 17 L11 16 C18 14 22 9 20 2 Z"
+                    fill="#EBC5CF"
+                    stroke="#1C1A18"
+                    strokeWidth="1.5"
+                    strokeLinejoin="round"
+                  />
+                  <line x1="7" y1="17" x2="14.5" y2="9.5" stroke="#1C1A18" strokeWidth="1.3" strokeLinecap="round" />
+                </svg>
+                <span>
+                  {tr(
+                    '02 · Pytania i Margines',
+                    '02 · Prompts & Margin',
+                    '02 · Preguntas y Margen',
+                    '02 · Questions et Marge'
+                  )}
+                </span>
               </div>
               <h2
                 className="text-3xl sm:text-4xl font-serif-literary text-[#1C1A18] leading-tight"
@@ -2851,7 +2946,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                         onClick={() => setSelectedCategory(cat.id)}
                         className={`px-3 py-1.5 rounded-md text-xs font-mono-meta transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
                           active
-                            ? 'bg-[#1C1A18] text-[#FAF8F5] font-medium'
+                            ? `${companionCta.activePillClass} font-medium`
                             : 'bg-[#F2EFE8] text-[#524D46] hover:text-[#1C1A18] hover:bg-[#EAE5DA]'
                         }`}
                       >
@@ -2921,7 +3016,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                         onClick={() => setSelectedSampleThoughtIdx(idx)}
                         className={`w-full text-left p-3 rounded-lg text-sm font-serif-literary transition-all cursor-pointer border-l-2 ${
                           active
-                            ? 'bg-[#F7F5F0] border-l-[#1C1A18] text-[#1C1A18] font-medium'
+                            ? `bg-[#F7F5F0] ${companionCta.activeBorderLClass} text-[#1C1A18] font-medium`
                             : 'bg-[#F7F5F0]/50 border-l-transparent text-[#524D46] hover:bg-[#F7F5F0]'
                         }`}
                       >
@@ -3084,7 +3179,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                         onClick={() => setDemoSparkleIdx(0)}
                         className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
                           demoSparkleIdx === 0
-                            ? 'bg-[#1C1A18] text-[#FAF8F5]'
+                            ? companionCta.activePillClass
                             : 'text-[#524D46] hover:text-[#1C1A18]'
                         }`}
                       >
@@ -3095,7 +3190,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                         onClick={() => setDemoSparkleIdx(1)}
                         className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
                           demoSparkleIdx === 1
-                            ? 'bg-[#1C1A18] text-[#FAF8F5]'
+                            ? companionCta.activePillClass
                             : 'text-[#524D46] hover:text-[#1C1A18]'
                         }`}
                       >
@@ -3272,7 +3367,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                         onClick={() => setDemoShareStep('create')}
                         className={`px-2 py-1 rounded-md transition-colors cursor-pointer ${
                           demoShareStep === 'create'
-                            ? 'bg-[#1C1A18] text-[#FAF8F5]'
+                            ? companionCta.activePillClass
                             : 'text-[#524D46] hover:text-[#1C1A18]'
                         }`}
                       >
@@ -3283,7 +3378,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                         onClick={() => setDemoShareStep('recipient_pin')}
                         className={`px-2 py-1 rounded-md transition-colors cursor-pointer ${
                           demoShareStep === 'recipient_pin'
-                            ? 'bg-[#1C1A18] text-[#FAF8F5]'
+                            ? companionCta.activePillClass
                             : 'text-[#524D46] hover:text-[#1C1A18]'
                         }`}
                       >
@@ -3294,7 +3389,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                         onClick={() => setDemoShareStep('unlocked')}
                         className={`px-2 py-1 rounded-md transition-colors cursor-pointer ${
                           demoShareStep === 'unlocked'
-                            ? 'bg-[#1C1A18] text-[#FAF8F5]'
+                            ? companionCta.activePillClass
                             : 'text-[#524D46] hover:text-[#1C1A18]'
                         }`}
                       >
@@ -3305,7 +3400,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                         onClick={() => setDemoShareStep('burned')}
                         className={`px-2 py-1 rounded-md transition-colors cursor-pointer ${
                           demoShareStep === 'burned'
-                            ? 'bg-[#8B2635] text-[#FAF8F5]'
+                            ? companionCta.activePillClass
                             : 'text-[#524D46] hover:text-[#1C1A18]'
                         }`}
                       >
@@ -3335,7 +3430,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                                 onClick={() => setDemoShareLang(l)}
                                 className={`px-2 py-0.5 rounded uppercase transition-colors cursor-pointer ${
                                   demoShareLang === l
-                                    ? 'bg-[#1C1A18] text-[#FAF8F5]'
+                                    ? companionCta.activePillClass
                                     : 'text-[#524D46] hover:text-[#1C1A18]'
                                 }`}
                               >
@@ -3387,7 +3482,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                             <button
                               type="button"
                               onClick={() => setDemoShareStep('recipient_pin')}
-                              className="px-3 py-1.5 rounded bg-[#1C1A18] hover:bg-[#33302B] text-[#FAF8F5] text-xs font-mono-meta inline-flex items-center gap-1 cursor-pointer"
+                              className={`px-3 py-1.5 rounded ${companionCta.activePillClass} text-xs font-mono-meta inline-flex items-center gap-1 cursor-pointer transition-colors`}
                             >
                               <span>{tr('Zobacz widok odbiorcy →', 'Recipient view →', 'Vista receptor →', 'Vue destinataire →')}</span>
                             </button>
@@ -3429,9 +3524,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                           <button
                             type="button"
                             onClick={() => setDemoShareStep('unlocked')}
-                            className="px-4 py-1.5 rounded bg-[#1C1A18] hover:bg-[#33302B] text-[#FAF8F5] text-xs font-mono-meta inline-flex items-center gap-1.5 cursor-pointer"
+                            className={`px-4 py-1.5 rounded ${companionCta.activePillClass} text-xs font-mono-meta inline-flex items-center gap-1.5 cursor-pointer transition-colors`}
                           >
-                            <Unlock className="w-3.5 h-3.5 text-[#EBC5CF]" />
+                            <Unlock className="w-3.5 h-3.5" />
                             <span>{tr('Otwórz jednorazowo', 'Unlock once', 'Abrir una vez', 'Ouvrir une fois')}</span>
                           </button>
                         </div>
@@ -3529,7 +3624,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     <button
                       type="button"
                       onClick={handleSaveEntryTrigger}
-                      className="px-3.5 py-1.5 rounded border border-[#1C1A18] bg-[#1C1A18] hover:bg-[#33302B] text-xs font-mono-meta text-[#FAF8F5] inline-flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
+                      className={`px-3.5 py-1.5 rounded ${companionCta.activePillClass} text-xs font-mono-meta inline-flex items-center gap-1.5 transition-colors cursor-pointer shrink-0`}
                     >
                       <span>{tr('Wypróbuj u siebie', 'Try it yourself', 'Pruébalo', 'Essayer')}</span>
                       <ArrowRight className="w-3 h-3" />
@@ -3548,13 +3643,33 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               {/* Left Column: Description & 4 Minimalist Metrics */}
               <div className="lg:col-span-5 space-y-6">
                 <div className="space-y-3">
-                  <div className="text-xs font-mono-meta text-[#7A756D]">
-                    {tr(
-                      '05 · Wykresy i statystyki pisania',
-                      '05 · Charts & writing statistics',
-                      '05 · Gráficos y estadísticas',
-                      '05 · Graphiques et statistiques'
-                    )}
+                  <div className="inline-flex items-center gap-2 text-xs font-mono-meta text-[#7A756D]">
+                    {/* Hand-drawn Line-Art Chart Icon */}
+                    <svg
+                      viewBox="0 0 26 20"
+                      className="w-5.5 h-4 shrink-0 overflow-visible"
+                      aria-hidden="true"
+                    >
+                      <line x1="2" y1="17" x2="24" y2="17" stroke="#1C1A18" strokeWidth="1.5" strokeLinecap="round" />
+                      <path
+                        d="M4 14 L10 9 L16 11.5 L22 4.5"
+                        fill="none"
+                        stroke="#1C1A18"
+                        strokeWidth="1.6"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <circle cx="10" cy="9" r="2.2" fill="#FAF8F5" stroke="#1C1A18" strokeWidth="1.3" />
+                      <circle cx="22" cy="4.5" r="2.6" fill="#EBC5CF" stroke="#8B2635" strokeWidth="1.4" />
+                    </svg>
+                    <span>
+                      {tr(
+                        '05 · Wykresy i statystyki pisania',
+                        '05 · Charts & writing statistics',
+                        '05 · Gráficos y estadísticas',
+                        '05 · Graphiques et statistiques'
+                      )}
+                    </span>
                   </div>
                   <h2
                     className="text-3xl sm:text-4xl font-serif-literary text-[#1C1A18] leading-tight"
@@ -4066,9 +4181,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <button
                     type="button"
                     onClick={handleInstallClick}
-                    className="px-5 py-3 rounded-lg bg-[#1C1A18] hover:bg-[#33302B] text-[#FAF8F5] text-xs font-mono-meta font-medium inline-flex items-center gap-2 cursor-pointer transition-colors"
+                    className={`px-5 py-3 rounded-lg ${companionCta.activePillClass} text-xs font-mono-meta font-medium inline-flex items-center gap-2 cursor-pointer transition-colors`}
                   >
-                    <Smartphone className="w-4 h-4 text-[#EBC5CF]" />
+                    <Smartphone className="w-4 h-4" />
                     <span>
                       {isInstalled
                         ? tr(
@@ -4280,7 +4395,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       onClick={() => setDemoViewMode('decrypted')}
                       className={`px-3 py-1 rounded text-xs font-mono-meta transition-colors cursor-pointer whitespace-nowrap ${
                         demoViewMode === 'decrypted'
-                          ? 'bg-[#1C1A18] text-[#FAF8F5]'
+                          ? companionCta.activePillClass
                           : 'text-[#524D46] hover:text-[#1C1A18]'
                       }`}
                     >
@@ -4291,7 +4406,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       onClick={() => setDemoViewMode('encrypted')}
                       className={`px-3 py-1 rounded text-xs font-mono-meta transition-colors cursor-pointer whitespace-nowrap ${
                         demoViewMode === 'encrypted'
-                          ? 'bg-[#1C1A18] text-[#FAF8F5]'
+                          ? companionCta.activePillClass
                           : 'text-[#524D46] hover:text-[#1C1A18]'
                       }`}
                     >
@@ -4333,7 +4448,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       <button
                         type="button"
                         onClick={() => setDemoViewMode('decrypted')}
-                        className="px-3 py-1.5 rounded-md bg-[#1C1A18] text-[#FAF8F5] text-xs font-mono-meta whitespace-nowrap shrink-0 cursor-pointer hover:bg-[#33302B]"
+                        className={`px-3 py-1.5 rounded-md ${companionCta.activePillClass} text-xs font-mono-meta whitespace-nowrap shrink-0 cursor-pointer transition-colors`}
                       >
                         {tr('Odblokuj wpis', 'Unlock entry', 'Desbloquear', 'Déverrouiller')}
                       </button>
@@ -4382,7 +4497,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 type="button"
                 onClick={onGoogleLogin}
                 disabled={isAuthLoading}
-                className="px-7 py-3.5 text-sm font-mono-meta font-medium text-[#FAF8F5] bg-[#1C1A18] hover:bg-[#33302B] rounded-lg transition-all inline-flex items-center gap-2.5 cursor-pointer whitespace-nowrap disabled:opacity-60"
+                className={`px-7 py-3.5 text-sm font-mono-meta font-medium ${companionCta.activePillClass} rounded-lg transition-all inline-flex items-center gap-2.5 cursor-pointer whitespace-nowrap disabled:opacity-60`}
               >
                 <span>
                   {isAuthLoading

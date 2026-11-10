@@ -294,6 +294,20 @@ export const PromptLibraryView: React.FC<PromptLibraryViewProps> = ({
     }, 20);
   };
 
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.onend = null;
+          recognitionRef.current.stop();
+        } catch {
+          // ignore
+        }
+        recognitionRef.current = null;
+      }
+    };
+  }, []);
+
   const toggleVoiceDictation = () => {
     if (typeof window === 'undefined') return;
     const SpeechRec =
@@ -304,10 +318,12 @@ export const PromptLibraryView: React.FC<PromptLibraryViewProps> = ({
 
     if (isListening && recognitionRef.current) {
       try {
+        recognitionRef.current.onend = null;
         recognitionRef.current.stop();
       } catch {
         // ignore
       }
+      recognitionRef.current = null;
       setIsListening(false);
       return;
     }
@@ -319,6 +335,9 @@ export const PromptLibraryView: React.FC<PromptLibraryViewProps> = ({
       rec.interimResults = false;
       rec.continuous = false;
 
+      rec.onstart = () => {
+        setIsListening(true);
+      };
       rec.onresult = (event: any) => {
         const transcript = event?.results?.[0]?.[0]?.transcript;
         if (transcript && typeof transcript === 'string') {
@@ -327,10 +346,12 @@ export const PromptLibraryView: React.FC<PromptLibraryViewProps> = ({
         }
       };
       rec.onerror = () => setIsListening(false);
-      rec.onend = () => setIsListening(false);
+      rec.onend = () => {
+        recognitionRef.current = null;
+        setIsListening(false);
+      };
 
       recognitionRef.current = rec;
-      setIsListening(true);
       rec.start();
     } catch {
       setIsListening(false);

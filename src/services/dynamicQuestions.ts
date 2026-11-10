@@ -24,6 +24,49 @@ function getQuestionsForPromptContext(promptText: string): string[] {
   }
 
   if (
+    (p.includes('spokojna chwila') && p.includes('drobiazg')) ||
+    p.includes('warto było przejść')
+  ) {
+    return [
+      'Czy była to krótka rozmowa z kimś bliskim, czy spokojna chwila tylko dla Ciebie?',
+      'Gdzie wtedy byłeś i jaki drobny szczegół z tego momentu pamiętasz najlepiej?',
+      'Co poczułeś w środku, kiedy zatrzymałeś się na tej jednej chwili?',
+      'Dlaczego właśnie ten moment sprawił, że dzisiejszy dzień nabrał dobrego znaczenia?',
+    ];
+  }
+
+  if (
+    p.includes('posiłek') ||
+    p.includes('napój') ||
+    p.includes('smak') ||
+    p.includes('aromat') ||
+    p.includes('jedzen') ||
+    p.includes('kuchn') ||
+    p.includes('kaw') ||
+    p.includes('herbat')
+  ) {
+    return [
+      'Jaki to był posiłek lub napój i jakie dokładnie wspomnienie przywołał?',
+      'Z kim albo z jakim miejscem z przeszłości najmocniej kojarzy Ci się ten smak?',
+      'Kto Ci wtedy towarzyszył albo gdzie dokładnie siedziałeś w tamtej chwili?',
+      'Jakie uczucie pojawiło się w Tobie, gdy ten aromat przypomniał Ci tamtą historię?',
+    ];
+  }
+
+  if (
+    p.includes('fotografi') ||
+    p.includes('zdjęci') ||
+    p.includes('kadr')
+  ) {
+    return [
+      'Gdzie zostało zrobione to zdjęcie i co działo się tuż poza jego kadrem?',
+      'Kto stał wtedy po drugiej stronie aparatu lub tuż obok Ciebie?',
+      'Jakie emocje pamiętasz z tamtej chwili sprzed naciśnięcia migawki?',
+      'Dlaczego akurat do tej fotografii tak często wracasz myślami?',
+    ];
+  }
+
+  if (
     p.includes('gest') ||
     p.includes('życzliw') ||
     p.includes('wdzięczn') ||
@@ -35,6 +78,21 @@ function getQuestionsForPromptContext(promptText: string): string[] {
       'Co dokładnie poczułeś w tamtej chwili, gdy to zauważyłeś?',
       'Dlaczego właśnie ten drobiazg tak mocno zapadł Ci w pamięć?',
       'Jaki mały gest możesz dziś wykonać w stronę bliskiej osoby?',
+    ];
+  }
+
+  if (
+    p.includes('energi') ||
+    p.includes('odpuśc') ||
+    p.includes('winy') ||
+    p.includes('zmęczen') ||
+    p.includes('wypalen')
+  ) {
+    return [
+      'Który dzisiejszy obowiązek możesz spokojnie przełożyć lub uprościć?',
+      'Co poczujesz w ciele i głowie, gdy naprawdę odpuścisz tę jedną rzecz?',
+      'Skąd bierze się myśl, że musisz dźwigać to wszystko naraz?',
+      'Jak możesz dziś wieczorem zadbać o chociaż pół godziny prawdziwego spokoju?',
     ];
   }
 
@@ -64,8 +122,8 @@ function getQuestionsForPromptContext(promptText: string): string[] {
     p.includes('lat')
   ) {
     return [
-      'Jaki pierwszy obraz lub zapach przychodzi Ci na myśl, gdy wracasz tam pamięcią?',
-      'Kto był wtedy obok Ciebie albo przed kim chowałeś ten swój świat?',
+      'Jaki pierwszy obraz lub szczegół przychodzi Ci na myśl, gdy wracasz tam pamięcią?',
+      'Kto był wtedy obok Ciebie albo jak wyglądało otoczenie wokół Ciebie?',
       'Jakie uczucie dawało Ci tamto miejsce lub tamta chwila?',
       'Czego z tamtego doświadczenia najbardziej brakuje Ci dzisiaj?',
     ];
@@ -80,8 +138,8 @@ function getQuestionsForPromptContext(promptText: string): string[] {
     p.includes('odpocz')
   ) {
     return [
-      'Opisz mi miejsce, gdzie chodzisz — jak tam wygląda?',
-      'O jakiej godzinie i dlaczego właśnie o tej porze tam bywasz?',
+      'Opisz mi miejsce, gdzie byłeś — jak tam wyglądało w tej chwili?',
+      'O jakiej godzinie i dlaczego właśnie o tej porze tam się znalazłeś?',
       'Co dzieje się w Twojej głowie, gdy pozwalasz sobie na tę chwilę ciszy?',
       'Co daje Ci ten spokój po powrocie do codziennych obowiązków?',
     ];
@@ -258,6 +316,35 @@ function getEnglishQuestionsForPromptContext(promptText: string): string[] {
   const p = promptText.toLowerCase();
 
   if (
+    (p.includes('quiet moment') && p.includes('small detail')) ||
+    p.includes('worth walking through')
+  ) {
+    return [
+      'Was it a brief conversation with someone close, or a quiet moment just for yourself?',
+      'Where were you then, and what small detail from that scene do you remember best?',
+      'What did you feel inside when you paused to notice that single moment?',
+      'Why did that moment make today feel meaningful to walk through?',
+    ];
+  }
+
+  if (
+    p.includes('meal') ||
+    p.includes('beverage') ||
+    p.includes('taste') ||
+    p.includes('aroma') ||
+    p.includes('coffee') ||
+    p.includes('tea') ||
+    p.includes('food')
+  ) {
+    return [
+      'What meal or drink was it, and what exact memory did it bring back?',
+      'Who or what place from the past do you associate most strongly with that taste?',
+      'Who was with you then, or where were you sitting at that moment?',
+      'What feeling surfaced in you when that aroma reminded you of that story?',
+    ];
+  }
+
+  if (
     p.includes('kindness') ||
     p.includes('gesture') ||
     p.includes('gratitude') ||
@@ -296,7 +383,7 @@ function getEnglishQuestionsForPromptContext(promptText: string): string[] {
     p.includes('object')
   ) {
     return [
-      'What is the very first image or scent that comes back when you recall it?',
+      'What is the very first image or detail that comes back when you recall it?',
       'Who else was there with you, or what lay just outside the frame?',
       'What feeling did that place or moment give you back then?',
       'What part of that experience do you miss most today?',
@@ -305,7 +392,6 @@ function getEnglishQuestionsForPromptContext(promptText: string): string[] {
 
   if (
     p.includes('sound') ||
-    p.includes('taste') ||
     p.includes('texture') ||
     p.includes('light') ||
     p.includes('evening') ||
@@ -398,6 +484,34 @@ function getSpanishQuestionsForPromptContext(promptText: string): string[] {
   const p = promptText.toLowerCase();
 
   if (
+    (p.includes('momento tranquilo') && p.includes('pequeño detalle')) ||
+    p.includes('valiera la pena')
+  ) {
+    return [
+      '¿Fue una breve conversación con alguien cercano o un momento tranquilo solo para ti?',
+      '¿Dónde estabas entonces y qué pequeño detalle de ese instante recuerdas mejor?',
+      '¿Qué sentiste por dentro al detenerte en ese único momento?',
+      '¿Por qué ese instante hizo que el día de hoy tuviera un buen sentido?',
+    ];
+  }
+
+  if (
+    p.includes('comida') ||
+    p.includes('bebida') ||
+    p.includes('sabor') ||
+    p.includes('aroma') ||
+    p.includes('café') ||
+    p.includes('té')
+  ) {
+    return [
+      '¿Qué comida o bebida era y qué recuerdo exacto despertó en ti?',
+      '¿Con quién o con qué lugar del pasado asocias más intensamente ese sabor?',
+      '¿Quién te acompañaba entonces o dónde estabas sentado en aquel momento?',
+      '¿Qué emoción surgió en ti cuando ese aroma te recordó aquella historia?',
+    ];
+  }
+
+  if (
     p.includes('amabilidad') ||
     p.includes('gesto') ||
     p.includes('gratitud') ||
@@ -432,11 +546,10 @@ function getSpanishQuestionsForPromptContext(promptText: string): string[] {
     p.includes('recuerdo') ||
     p.includes('fotografía') ||
     p.includes('pasado') ||
-    p.includes('aroma') ||
     p.includes('objeto')
   ) {
     return [
-      '¿Cuál es la primera imagen o aroma que vuelve a ti al recordarlo?',
+      '¿Cuál es la primera imagen o detalle que vuelve a ti al recordarlo?',
       '¿Quién más estaba allí contigo o qué había justo fuera del encuadre?',
       '¿Qué sensación te daba aquel lugar o aquel momento entonces?',
       '¿Qué parte de esa experiencia echas más de menos hoy?',
@@ -520,6 +633,34 @@ function getFrenchQuestionsForPromptContext(promptText: string): string[] {
   const p = promptText.toLowerCase();
 
   if (
+    (p.includes('moment paisible') && p.includes('petit détail')) ||
+    p.includes('valait la peine')
+  ) {
+    return [
+      'Était-ce un bref échange avec un proche ou un moment paisible rien que pour vous ?',
+      'Où étiez-vous alors et quel petit détail de cet instant retenez-vous le mieux ?',
+      'Qu’avez-vous ressenti intérieurement en vous arrêtant sur ce moment ?',
+      'Pourquoi cet instant a-t-il donné tout son sens à votre journée ?',
+    ];
+  }
+
+  if (
+    p.includes('repas') ||
+    p.includes('boisson') ||
+    p.includes('goût') ||
+    p.includes('arôme') ||
+    p.includes('café') ||
+    p.includes('thé')
+  ) {
+    return [
+      'Quel était ce repas ou cette boisson, et quel souvenir précis a-t-il éveillé ?',
+      'À quelle personne ou à quel lieu du passé associez-vous le plus cette saveur ?',
+      'Qui vous accompagnait alors, ou dans quel cadre vous trouviez-vous à cet instant ?',
+      'Quelle émotion est née en vous lorsque cet arôme vous a rappelé cette histoire ?',
+    ];
+  }
+
+  if (
     p.includes('bienveillance') ||
     p.includes('geste') ||
     p.includes('gratitude') ||
@@ -554,11 +695,10 @@ function getFrenchQuestionsForPromptContext(promptText: string): string[] {
     p.includes('souvenir') ||
     p.includes('photographie') ||
     p.includes('passé') ||
-    p.includes('odeur') ||
     p.includes('objet')
   ) {
     return [
-      'Quelle est la toute première image ou odeur qui vous revient en y pensant ?',
+      'Quelle est la toute première image ou détail qui vous revient en y pensant ?',
       'Qui d’autre était là avec vous, ou que se passait-il juste hors du cadre ?',
       'Quel sentiment ce lieu ou ce moment vous procurait-il à l’époque ?',
       'Quelle part de cette expérience vous manque le plus aujourd’hui ?',

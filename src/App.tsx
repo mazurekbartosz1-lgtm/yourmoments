@@ -152,10 +152,12 @@ function getInitialThreePrompts(
     }
   }
 
-  // Ensure primary daily prompt (filtered against past 30 days) is present at the front if empty
+  // Always start with DAILY_PROMPTS[0] ("Jaka jedna spokojna chwila, rozmowa lub drobiazg sprawiły, że warto było przejść przez ten dzień?") unless another prompt was explicitly locked
   const now = new Date();
-  const primaryPrompt = getPromptForDate(now, recent30DaysIds) || DAILY_PROMPTS[0];
-  if (list.length === 0) {
+  const primaryPrompt = DAILY_PROMPTS[0];
+  if (!lockedPromptId || lockedPromptId === primaryPrompt.id) {
+    list = [primaryPrompt, ...list.filter(p => p.id !== primaryPrompt.id)];
+  } else if (list.length === 0) {
     list.push(primaryPrompt);
   }
 
@@ -365,10 +367,17 @@ export default function App() {
   });
 
   // User settings, Cloud Keyring Sync & E2EE Device recognition
-  // Each day and each site visit, a different animal companion assists the user
+  // Always start with the Fox companion ('fox') unless the user explicitly chose another companion
   const [companionId, setCompanionId] = useState<CompanionId>(() => {
-    const randomIdx = Math.floor(Math.random() * COMPANIONS.length);
-    return COMPANIONS[randomIdx]?.id || 'crocodile';
+    try {
+      const saved = localStorage.getItem('kronika_companion') as CompanionId | null;
+      if (saved && COMPANIONS.some(c => c.id === saved)) {
+        return saved;
+      }
+    } catch {
+      // ignore
+    }
+    return 'fox';
   });
   const [encryptionKey, setEncryptionKey] = useState<string>('');
   const [keyring, setKeyring] = useState<string[]>([]);
@@ -1833,6 +1842,22 @@ export default function App() {
     };
   }, [authReady, currentUser, showLandingPreview]);
 
+  useEffect(() => {
+    if ((!authReady && !activeShareId) || typeof document === 'undefined') return;
+    const loader = document.getElementById('initial-app-loader');
+    if (!loader) return;
+    const rafId = window.requestAnimationFrame(() => {
+      loader.classList.add('is-loaded');
+    });
+    const timerId = window.setTimeout(() => {
+      loader.remove();
+    }, 480);
+    return () => {
+      window.cancelAnimationFrame(rafId);
+      window.clearTimeout(timerId);
+    };
+  }, [authReady, activeShareId]);
+
   if (activeShareId) {
     return (
       <SharedEntryView
@@ -1849,15 +1874,90 @@ export default function App() {
 
   if (!authReady) {
     return (
-      <div className="min-h-screen bg-[#F7F5F0] text-[#1C1A18] flex items-center justify-center font-serif-literary antialiased">
-        <div className="text-sm font-mono-meta text-[#7A756D]">
-          {lang === 'en'
-            ? 'Opening Moments...'
-            : lang === 'es'
-            ? 'Abriendo Moments...'
-            : lang === 'fr'
-            ? 'Ouverture de Moments...'
-            : 'Otwieranie Momenty...'}
+      <div className="min-h-screen bg-[#F7F5F0] text-[#1C1A18] flex flex-col items-center justify-center p-6 font-serif-literary antialiased">
+        <div className="flex flex-col items-center gap-4 max-w-[280px] text-center">
+          <svg viewBox="0 0 148 124" className="w-[148px] h-[124px] overflow-visible" aria-hidden="true">
+            <path
+              d="M30 22 C30 27.5 32.5 30 38 30 C32.5 30 30 32.5 30 38 C30 32.5 27.5 30 22 30 C27.5 30 30 27.5 30 22 Z"
+              fill="#EBC5CF"
+              stroke="#1C1A18"
+              strokeWidth="1.6"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M122 45 C122 49.5 124.5 52 129 52 C124.5 52 122 54.5 122 59 C122 54.5 119.5 52 115 52 C119.5 52 122 49.5 122 45 Z"
+              fill="#789A82"
+              stroke="#1C1A18"
+              strokeWidth="1.5"
+              strokeLinejoin="round"
+            />
+            <circle cx="24" cy="76" r="3" fill="#FAF8F5" stroke="#1C1A18" strokeWidth="1.5" />
+            <circle cx="94" cy="31" r="11.5" fill="#EBC5CF" stroke="#1C1A18" strokeWidth="1.8" />
+            <path
+              d="M52 53 H93 C99.5 53 102.5 47.8 100.5 42.5 C99 38.4 94.8 37.3 92 38.4 C89.8 30 81.5 25.8 74.2 29 C69 24.8 60.8 26.8 58.6 34.2 C52.4 34.6 47.2 39.4 47.6 45.6 C47.8 49.8 49.8 53 52 53 Z"
+              fill="#FAF8F5"
+              stroke="#1C1A18"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <rect x="41" y="66" width="70" height="46" rx="8" fill="#EAE5DA" />
+            <rect
+              x="38"
+              y="63"
+              width="70"
+              height="46"
+              rx="8"
+              fill="#FAF8F5"
+              stroke="#1C1A18"
+              strokeWidth="1.8"
+            />
+            <path
+              d="M92 63 V76 L96.5 72.5 L101 76 V63 Z"
+              fill="#789A82"
+              stroke="#1C1A18"
+              strokeWidth="1.5"
+              strokeLinejoin="round"
+            />
+            <line
+              x1="48"
+              y1="77"
+              x2="84"
+              y2="77"
+              stroke="#1C1A18"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+            />
+            <line
+              x1="48"
+              y1="86"
+              x2="82"
+              y2="86"
+              stroke="#1C1A18"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+            />
+            <line
+              x1="48"
+              y1="95"
+              x2="72"
+              y2="95"
+              stroke="#7A756D"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+            />
+            <circle cx="96" cy="96" r="4" fill="#EBC5CF" stroke="#1C1A18" strokeWidth="1.5" />
+          </svg>
+          <p className="text-xl font-medium text-[#1C1A18] tracking-wide">Momenty</p>
+          <p className="text-[11px] font-mono-meta uppercase tracking-[0.14em] text-[#7A756D] -mt-2">
+            {lang === 'en'
+              ? 'A quiet page for today'
+              : lang === 'es'
+              ? 'Una página tranquila para hoy'
+              : lang === 'fr'
+              ? 'Une page calme pour aujourd’hui'
+              : 'Cicha kartka na dziś'}
+          </p>
         </div>
       </div>
     );

@@ -1015,7 +1015,7 @@ Return strictly valid JSON with two keys:
         )}</a></li>`;
       }).join('\n');
 
-      const prerenderedRoot = `<div id="root"><main class="max-w-5xl mx-auto px-6 py-14 font-serif"><header class="mb-8"><a href="/">← Momenty / Moments</a></header><h1>${escapeHtml(
+      const prerenderedRoot = `<div id="root"><main class="seo-prerender-fallback max-w-5xl mx-auto px-6 py-14 font-serif"><header class="mb-8"><a href="/">← Momenty / Moments</a></header><h1>${escapeHtml(
         title
       )}</h1><p>${escapeHtml(desc)}</p><ul>${listItemsHtml}</ul></main></div>`;
 
@@ -1058,7 +1058,7 @@ Return strictly valid JSON with two keys:
           .map(q => `<li>${escapeHtml(q)}</li>`)
           .join('');
 
-        const prerenderedRoot = `<div id="root"><article class="max-w-4xl mx-auto px-6 py-14 font-serif"><nav><a href="/">Momenty</a> · <a href="/prompts">Prompts</a> · <span>${escapeHtml(
+        const prerenderedRoot = `<div id="root"><article class="seo-prerender-fallback max-w-4xl mx-auto px-6 py-14 font-serif"><nav><a href="/">Momenty</a> · <a href="/prompts">Prompts</a> · <span>${escapeHtml(
           seoPl.categoryLabel
         )}</span></nav><h1>${escapeHtml(matched.promptPl)}</h1><h2>${escapeHtml(
           matched.promptEn
