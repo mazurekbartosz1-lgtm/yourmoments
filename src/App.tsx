@@ -197,6 +197,75 @@ function getInitialThreePrompts(
   return finalThree;
 }
 
+function detectBrowserAndSystemLanguage(): 'pl' | 'en' | 'es' | 'fr' {
+  if (typeof window === 'undefined') return 'pl';
+
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const urlLang = (params.get('lang') || params.get('hl') || '').trim().toLowerCase();
+    if (urlLang.startsWith('pl')) return 'pl';
+    if (urlLang.startsWith('en')) return 'en';
+    if (urlLang.startsWith('es')) return 'es';
+    if (urlLang.startsWith('fr')) return 'fr';
+  } catch {
+    // ignore URL parse errors
+  }
+
+  try {
+    const manualLang = localStorage.getItem('kronika_lang_manual');
+    if (manualLang === 'pl' || manualLang === 'en' || manualLang === 'es' || manualLang === 'fr') {
+      return manualLang;
+    }
+  } catch {
+    // ignore storage errors
+  }
+
+  const candidates: string[] = [];
+  if (typeof navigator !== 'undefined') {
+    if (Array.isArray(navigator.languages)) {
+      candidates.push(...navigator.languages);
+    }
+    if (navigator.language) {
+      candidates.push(navigator.language);
+    }
+  }
+  try {
+    const intlLocale = Intl.DateTimeFormat().resolvedOptions().locale;
+    if (intlLocale) candidates.push(intlLocale);
+  } catch {
+    // ignore
+  }
+
+  for (const raw of candidates) {
+    if (!raw) continue;
+    const code = raw.toLowerCase().trim();
+    if (code.startsWith('pl')) return 'pl';
+    if (code.startsWith('es')) return 'es';
+    if (code.startsWith('fr')) return 'fr';
+    if (code.startsWith('en')) return 'en';
+  }
+
+  try {
+    const tz = (Intl.DateTimeFormat().resolvedOptions().timeZone || '').toLowerCase();
+    if (tz.includes('warsaw')) return 'pl';
+    if (
+      tz.includes('madrid') ||
+      tz.includes('mexico') ||
+      tz.includes('buenos_aires') ||
+      tz.includes('bogota') ||
+      tz.includes('santiago') ||
+      tz.includes('lima')
+    ) {
+      return 'es';
+    }
+    if (tz.includes('paris')) return 'fr';
+  } catch {
+    // ignore
+  }
+
+  return 'en';
+}
+
 export default function App() {
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [authReady, setAuthReady] = useState<boolean>(false);
@@ -205,19 +274,58 @@ export default function App() {
   const [authError, setAuthError] = useState<string | null>(null);
   const loadedUidRef = useRef<string | null>(null);
 
-  // Language state ('pl' | 'en' | 'es' | 'fr') persisted in localStorage
+  // Language state ('pl' | 'en' | 'es' | 'fr') detected from browser & OS or user's manual choice
   const [lang, setLang] = useState<'pl' | 'en' | 'es' | 'fr'>(() => {
-    const savedLang = localStorage.getItem('kronika_lang');
-    if (savedLang === 'en' || savedLang === 'es' || savedLang === 'fr' || savedLang === 'pl') {
-      return savedLang;
+    const detected = detectBrowserAndSystemLanguage();
+    try {
+      localStorage.setItem('kronika_lang', detected);
+    } catch {
+      // ignore
     }
-    return 'pl';
+    return detected;
   });
 
   const handleChangeLang = (newLang: 'pl' | 'en' | 'es' | 'fr') => {
     setLang(newLang);
-    localStorage.setItem('kronika_lang', newLang);
+    try {
+      localStorage.setItem('kronika_lang', newLang);
+      localStorage.setItem('kronika_lang_manual', newLang);
+    } catch {
+      // ignore
+    }
   };
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleSystemLanguageChange = () => {
+      try {
+        if (!localStorage.getItem('kronika_lang_manual')) {
+          const next = detectBrowserAndSystemLanguage();
+          setLang(next);
+          localStorage.setItem('kronika_lang', next);
+        }
+      } catch {
+        // ignore
+      }
+    };
+    window.addEventListener('languagechange', handleSystemLanguageChange);
+    return () => window.removeEventListener('languagechange', handleSystemLanguageChange);
+  }, []);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    document.documentElement.lang = lang;
+    if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/prompts')) {
+      document.title =
+        lang === 'en'
+          ? 'Moments — A quiet page for your daily moments'
+          : lang === 'es'
+          ? 'Momentos — Una página tranquila para tus momentos diarios'
+          : lang === 'fr'
+          ? 'Moments — Une page calme pour vos moments quotidiens'
+          : 'Momenty — Cicha kartka na Twoje codzienne momenty';
+    }
+  }, [lang]);
 
   const [currentPathname, setCurrentPathname] = useState<string>(() => {
     if (typeof window === 'undefined') return '/';
@@ -1948,7 +2056,9 @@ export default function App() {
             />
             <circle cx="96" cy="96" r="4" fill="#EBC5CF" stroke="#1C1A18" strokeWidth="1.5" />
           </svg>
-          <p className="text-xl font-medium text-[#1C1A18] tracking-wide">Momenty</p>
+          <p className="text-xl font-medium text-[#1C1A18] tracking-wide">
+            {lang === 'en' || lang === 'fr' ? 'Moments' : lang === 'es' ? 'Momentos' : 'Momenty'}
+          </p>
           <p className="text-[11px] font-mono-meta uppercase tracking-[0.14em] text-[#7A756D] -mt-2">
             {lang === 'en'
               ? 'A quiet page for today'

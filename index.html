@@ -387,12 +387,58 @@
           </g>
         </svg>
 
-        <p class="momenty-loader-title">Momenty</p>
-        <p class="momenty-loader-subtitle">Cicha kartka na dziś</p>
+        <p id="momenty-loader-title" class="momenty-loader-title">Momenty</p>
+        <p id="momenty-loader-subtitle" class="momenty-loader-subtitle">Cicha kartka na dziś</p>
         <div class="momenty-loader-bar-track" aria-hidden="true">
           <div class="momenty-loader-bar-fill"></div>
         </div>
       </div>
+      <script>
+        (function () {
+          try {
+            var lang = null;
+            var params = new URLSearchParams(window.location.search);
+            var q = (params.get('lang') || params.get('hl') || '').toLowerCase();
+            if (q.indexOf('pl') === 0) lang = 'pl';
+            else if (q.indexOf('en') === 0) lang = 'en';
+            else if (q.indexOf('es') === 0) lang = 'es';
+            else if (q.indexOf('fr') === 0) lang = 'fr';
+            if (!lang) {
+              var manual = localStorage.getItem('kronika_lang_manual');
+              if (manual === 'pl' || manual === 'en' || manual === 'es' || manual === 'fr') {
+                lang = manual;
+              }
+            }
+            if (!lang) {
+              var list = (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || '']);
+              for (var i = 0; i < list.length; i++) {
+                var c = String(list[i] || '').toLowerCase();
+                if (c.indexOf('pl') === 0) { lang = 'pl'; break; }
+                if (c.indexOf('es') === 0) { lang = 'es'; break; }
+                if (c.indexOf('fr') === 0) { lang = 'fr'; break; }
+                if (c.indexOf('en') === 0) { lang = 'en'; break; }
+              }
+            }
+            if (!lang) lang = 'en';
+            document.documentElement.lang = lang;
+            var tEl = document.getElementById('momenty-loader-title');
+            var sEl = document.getElementById('momenty-loader-subtitle');
+            if (tEl) {
+              tEl.textContent = lang === 'pl' ? 'Momenty' : lang === 'es' ? 'Momentos' : 'Moments';
+            }
+            if (sEl) {
+              sEl.textContent =
+                lang === 'en'
+                  ? 'A quiet page for today'
+                  : lang === 'es'
+                  ? 'Una página tranquila para hoy'
+                  : lang === 'fr'
+                  ? 'Une page calme pour aujourd’hui'
+                  : 'Cicha kartka na dziś';
+            }
+          } catch (e) {}
+        })();
+      </script>
     </div>
 
     <div id="root">
