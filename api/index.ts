@@ -1168,6 +1168,890 @@ Tone & Framing:
   }
 });
 
+// Helper to build 1080x1080 (Post) or 1080x1920 (Story) editorial visual card SVG
+function buildEditorialCardSvgDataUri(
+  partNumber: string,
+  badge: string,
+  headline: string,
+  quoteSnippet: string,
+  accentHex: string,
+  format: 'post' | 'story',
+  styleTag: string = 'Nano Banana Editorial'
+): string {
+  const isStory = format === 'story';
+  const width = 1080;
+  const height = isStory ? 1920 : 1080;
+  const safeBadge = escapeHtml(badge.toUpperCase());
+  const safeHeadline = escapeHtml(headline);
+  const safeSnippet = escapeHtml(quoteSnippet);
+  const safeStyleTag = escapeHtml(styleTag);
+
+  const wrapLines = (text: string, maxChars: number, maxLines: number): string[] => {
+    const words = text.split(/\s+/).filter(Boolean);
+    const lines: string[] = [];
+    let current = '';
+    for (const word of words) {
+      if ((current + ' ' + word).trim().length <= maxChars) {
+        current = (current + ' ' + word).trim();
+      } else {
+        if (current) lines.push(current);
+        current = word;
+        if (lines.length >= maxLines - 1) break;
+      }
+    }
+    const consumedWords = lines.join(' ').split(/\s+/).filter(Boolean).length;
+    const remainder = words.slice(consumedWords).join(' ');
+    if (remainder) {
+      lines.push(
+        remainder.length > maxChars + 8 ? remainder.slice(0, maxChars + 5) + '…' : remainder
+      );
+    }
+    return lines.slice(0, maxLines);
+  };
+
+  const headlineLines = wrapLines(safeHeadline, isStory ? 22 : 25, isStory ? 5 : 3);
+  const snippetLines = wrapLines(safeSnippet, isStory ? 36 : 42, isStory ? 6 : 4);
+
+  const topBarY = isStory ? 180 : 114;
+  const headlineStartY = isStory ? 520 : 310;
+  const headlineLineHeight = isStory ? 76 : 68;
+  const headlineTspans = headlineLines
+    .map((line, idx) => `<tspan x="96" dy="${idx === 0 ? 0 : headlineLineHeight}">${line}</tspan>`)
+    .join('');
+
+  const snippetStartY = headlineStartY + headlineLines.length * headlineLineHeight + (isStory ? 90 : 54);
+  const snippetLineHeight = isStory ? 50 : 44;
+  const snippetTspans = snippetLines
+    .map((line, idx) => `<tspan x="128" dy="${idx === 0 ? 0 : snippetLineHeight}">${line}</tspan>`)
+    .join('');
+
+  const footerLineY = isStory ? 1660 : 880;
+  const footerContentY = isStory ? 1700 : 912;
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">
+    <defs>
+      <radialGradient id="warmGlow" cx="75%" cy="22%" r="60%">
+        <stop offset="0%" stop-color="${accentHex}" stop-opacity="0.14"/>
+        <stop offset="100%" stop-color="#FAF8F5" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+    <rect width="${width}" height="${height}" fill="#F7F5F0"/>
+    <rect x="44" y="44" width="${width - 88}" height="${height - 88}" rx="40" fill="#FAF8F5" stroke="#E5DFD3" stroke-width="3"/>
+    <rect x="44" y="44" width="${width - 88}" height="${height - 88}" rx="40" fill="url(#warmGlow)"/>
+
+    <!-- Top Badge -->
+    <rect x="96" y="${topBarY}" width="460" height="50" rx="25" fill="#F2EFE8" stroke="#DDD6C8" stroke-width="2"/>
+    <circle cx="126" cy="${topBarY + 25}" r="8" fill="${accentHex}"/>
+    <text x="148" y="${topBarY + 31}" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18" font-weight="600" fill="#524D46" letter-spacing="1.5">${escapeHtml(partNumber)} · ${safeBadge.slice(0, 26)}</text>
+
+    <!-- Minimal Editorial Illustration Accent -->
+    <g transform="translate(820, ${topBarY - 12})">
+      <rect x="0" y="0" width="164" height="164" rx="36" fill="#F2EFE8" stroke="#1C1A18" stroke-width="3"/>
+      <circle cx="82" cy="68" r="26" fill="${accentHex}" opacity="0.22"/>
+      <rect x="38" y="44" width="88" height="76" rx="12" fill="#FAF8F5" stroke="#1C1A18" stroke-width="3.5"/>
+      <line x1="54" y1="66" x2="110" y2="66" stroke="#1C1A18" stroke-width="3.5" stroke-linecap="round"/>
+      <line x1="54" y1="84" x2="98" y2="84" stroke="${accentHex}" stroke-width="3.5" stroke-linecap="round"/>
+      <line x1="54" y1="102" x2="82" y2="102" stroke="#7A756D" stroke-width="3.5" stroke-linecap="round"/>
+    </g>
+
+    <!-- Main Editorial Headline -->
+    <text x="96" y="${headlineStartY}" font-family="Georgia, 'Times New Roman', serif" font-size="${isStory ? 60 : 54}" font-weight="500" fill="#1C1A18">${headlineTspans}</text>
+
+    <!-- Quote Callout -->
+    <rect x="96" y="${snippetStartY - 46}" width="7" height="${snippetLines.length * snippetLineHeight + 38}" rx="3.5" fill="${accentHex}"/>
+    <text x="128" y="${snippetStartY}" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-size="${isStory ? 35 : 31}" fill="#524D46">${snippetTspans}</text>
+
+    ${
+      isStory
+        ? `<g transform="translate(96, 1340)">
+            <rect x="0" y="0" width="888" height="220" rx="28" fill="#F2EFE8" stroke="#DDD6C8" stroke-width="2"/>
+            <text x="48" y="68" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="20" font-weight="600" fill="${accentHex}" letter-spacing="1.5">IDEA EXPLORER NOTE · DAILYMOMENTS.APP</text>
+            <text x="48" y="122" font-family="Georgia, 'Times New Roman', serif" font-size="30" fill="#1C1A18">Zapisz jedną myśl wieczorem — bez logowania na start,</text>
+            <text x="48" y="166" font-family="Georgia, 'Times New Roman', serif" font-size="30" fill="#1C1A18">z pełnym szyfrowaniem End-to-End w przeglądarce.</text>
+          </g>`
+        : ''
+    }
+
+    <!-- Footer -->
+    <line x1="96" y1="${footerLineY}" x2="984" y2="${footerLineY}" stroke="#E5DFD3" stroke-width="2"/>
+    <g transform="translate(96, ${footerContentY})">
+      <rect x="0" y="0" width="58" height="58" rx="14" fill="#F2EFE8" stroke="#1C1A18" stroke-width="2.5"/>
+      <polygon points="14,24 20,10 28,22" fill="#C96839" stroke="#1C1A18" stroke-width="2"/>
+      <polygon points="44,24 38,10 30,22" fill="#C96839" stroke="#1C1A18" stroke-width="2"/>
+      <rect x="14" y="20" width="30" height="22" rx="4" fill="#C96839" stroke="#1C1A18" stroke-width="2"/>
+      <circle cx="23" cy="29" r="2.2" fill="#1C1A18"/>
+      <circle cx="35" cy="29" r="2.2" fill="#1C1A18"/>
+      <rect x="12" y="42" width="34" height="7" rx="2" fill="#33302B"/>
+    </g>
+    <text x="174" y="${footerContentY + 24}" font-family="Georgia, 'Times New Roman', serif" font-size="28" font-weight="600" fill="#1C1A18">YourMoments · Idea Explorer</text>
+    <text x="174" y="${footerContentY + 54}" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="19" fill="#7A756D">${safeStyleTag} · ${width}×${height}</text>
+
+    <rect x="756" y="${footerContentY + 2}" width="228" height="54" rx="14" fill="${accentHex}"/>
+    <text x="870" y="${footerContentY + 36}" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="20" font-weight="600" fill="#FAF8F5">dailymoments.app</text>
+  </svg>`;
+
+  return `data:image/svg+xml;base64,${Buffer.from(svg, 'utf-8').toString('base64')}`;
+}
+
+// STEP 2 ENDPOINT: Refine user's raw idea into 3 distinct Instagram proposals (Post 1:1 or Story 9:16)
+app.post('/api/admin/campaign/refine', async (req, res) => {
+  try {
+    const { rawIdea = '', format = 'post', lang = 'pl' } = req.body || {};
+    const cleanIdea = String(rawIdea || '').trim();
+    if (!cleanIdea) {
+      return res.status(400).json({ ok: false, error: 'Raw idea text is required' });
+    }
+
+    const igFormat: 'post' | 'story' = format === 'story' ? 'story' : 'post';
+    const isPl = lang === 'pl';
+    const aspectLabel = igFormat === 'story' ? '9:16 vertical (1080x1920) Instagram Story' : '1:1 square (1080x1080) Instagram Post';
+
+    const accentPalette = ['#C96839', '#2E6F40', '#8B2635'];
+
+    // Fallback proposals in case Gemini is temporarily unavailable
+    const fallbackProposals = isPl
+      ? [
+          {
+            id: 'prop_story',
+            angleBadge: '01 · HISTORIA ODKRYWCY (IDEA EXPLORER)',
+            angleRationale:
+              'Rozwinięcie Twojej surowej myśli w osobistą historię z procesu budowania YourMoments (build-in-public), budującą autentyczną więź.',
+            headline: cleanIdea.length <= 88 ? cleanIdea : `${cleanIdea.slice(0, 82)}…`,
+            visualQuote:
+              'Najlepsze narzędzia powstają wtedy, gdy sam próbujesz rozwiązać własny wieczorny chaos w głowie — jedną spokojną kartką papieru.',
+            caption:
+              igFormat === 'story'
+                ? `[Klatka 1 — Hook na górze]\nZłapałem się dziś na jednej myśli podczas rozwijania YourMoments:\n„${cleanIdea}”\n\n[Klatka 2 — Odkrycie]\nJako idea explorer testuję różne podejścia do wieczornego spokoju. Zamiast budować kolejny przeładowany dashboard, postawiłem na jedną ciepłą kartkę papieru i szyfrowanie End-to-End w przeglądarce.\n\n[Klatka 3 — Naklejka Link / CTA]\nZapisz dziś wieczorem chociaż 2 zdania dla siebie na dailymoments.app (bez logowania na start).`
+                : `Złapałem się dziś na jednej myśli, którą od razu zapisałem w notatniku przy budowie YourMoments (dailymoments.app):\n\n„${cleanIdea}”\n\nJako odkrywca pomysłów (idea explorer) dzielący się postępami tego projektu na żywo, coraz wyraźniej widzę, że nie potrzebujemy kolejnej głośnej aplikacji z wykresami produktywności. Potrzebujemy cichego miejsca, które przypomina ciepłą kartkę papieru, zadaje jedno mądre pytanie wieczorem i szyfruje słowa kluczem AES-256 zanim opuszczą przeglądarkę.\n\nJak wygląda Wasz wieczorny rytuał zamykania dnia? Sprawdźcie dzisiejsze pytanie na dailymoments.app.`,
+            hashtags: [
+              '#ideaexplorer',
+              '#buildinpublic',
+              '#yourmoments',
+              '#dailymoments',
+              '#calmtech',
+              '#wieczornyrytual',
+              '#mikrodziennik',
+            ],
+            nanoBananaPrompt: `Minimalist warm editorial illustration on archival cream paper (#FAF8F5), burnt sienna (#C96839) and deep charcoal ink lines, depicting a quiet evening writing desk with a classic typewriter, a small pixel-art fox companion, and subtle glowing stars, inspired by "${cleanIdea.slice(0, 120)}", calm literary magazine aesthetic, ${igFormat === 'story' ? 'vertical 9:16 composition' : 'square 1:1 composition'}, no cluttered text`,
+            accentHex: accentPalette[0],
+          },
+          {
+            id: 'prop_contrast',
+            angleBadge: '02 · KONTRAST: SPOKÓJ VS. SZUM',
+            angleRationale:
+              'Przekształcenie Twojego pomysłu w mocny kontrast między przebodźcowanymi aplikacjami a spokojną architekturą prywatności E2EE.',
+            headline: 'Mniej cyfrowego hałasu. Jedno pytanie i myśli, które należą wyłącznie do Ciebie.',
+            visualQuote: `Wokół idei: „${cleanIdea.slice(0, 110)}” — zero feedów, zero oceniania, pełne szyfrowanie w Twojej przeglądarce.`,
+            caption:
+              igFormat === 'story'
+                ? `[Klatka 1 — Kontrast]\nTypowe aplikacje: powiadomienia, serie, presja i Twoje myśli w otwartym tekście na serwerze.\nYourMoments: jedna kartka papieru i cisza.\n\n[Klatka 2 — Kontekst]\nWyszliśmy od prostej obserwacji: ${cleanIdea}\n\n[Klatka 3 — CTA]\nPrzetestuj pisanie na żywo na stronie głównej dailymoments.app.`
+                : `Większość narzędzi, które mają pomagać nam uporządkować głowę, robi dokładnie odwrotnie — dokłada kolejne powiadomienia, paski postępu i przechowuje nasze prywatne zapiski otwartym tekstem.\n\nEksplorując ten temat przy budowie YourMoments, wyszedłem od prostej myśli:\n${cleanIdea}\n\nDlatego w YourMoments:\n• Nie ma ściany logowania na wejściu — strona główna to od razu Twoje biurko\n• Na marginesie pojawia się tylko jedno ciche pytanie pomocnicze\n• Cały tekst jest szyfrowany lokalnie (AES-256 E2EE) zanim trafi do chmury\n\nSprawdź, jak pisze się na spokojnym papierze: dailymoments.app.`,
+            hashtags: [
+              '#digitalminimalism',
+              '#privacyfirst',
+              '#e2ee',
+              '#ideaexplorer',
+              '#yourmoments',
+              '#dailymoments',
+              '#spokojnaglowa',
+            ],
+            nanoBananaPrompt: `Artistic editorial illustration in warm paper tones (#F7F5F0), forest green (#2E6F40) and terracotta accents, showing a serene open journal and a brass padlock dissolving into gentle paper leaves, symbolizing digital silence and end-to-end encrypted thoughts about "${cleanIdea.slice(0, 120)}", New Yorker editorial spot illustration style`,
+            accentHex: accentPalette[1],
+          },
+          {
+            id: 'prop_ritual',
+            angleBadge: '03 · MIKRO-RYTUAŁ 60 SEKUND',
+            angleRationale:
+              'Przekucie Twojej myśli w natychmiastowy, 60-sekundowy wieczorny mikro-nawyk, który odbiorca może wypróbować od razu.',
+            headline: '60 sekund wieczorem wystarczy, żeby nie zgubić tego, co było dziś naprawdę ważne.',
+            visualQuote:
+              'Napisz 3 zdania na klawiaturze albo podyktuj głosem podczas wieczornego spaceru — i zamknij dzień.',
+            caption:
+              igFormat === 'story'
+                ? `[Klatka 1 — Mikro-Rytuał]\nNie potrzebujesz godziny na pisanie dziennika.\n\n[Klatka 2 — Jak to działa]\n${cleanIdea}\n1. Otwierasz dailymoments.app\n2. Odpowiadasz jednym zdaniem (albo dyktujesz głosem)\n3. Klikasz „Zamknij dzień”\n\n[Klatka 3 — Link Sticker]\nTwoje dzisiejsze pytanie już czeka na dailymoments.app`
+                : `Każdy wieczór składa się z dziesiątek drobnych chwil, które następnego ranka kompletnie znikają z pamięci, jeśli ich nie nazwiemy.\n\nRozwijając YourMoments, zapisałem sobie myśl przewodnią:\n„${cleanIdea}”\n\nZamiast zmuszać się do długich wypracowań, spróbuj dziś wieczorem 60-sekundowego rytuału:\n1. Wejdź na dailymoments.app i przeczytaj dzisiejsze pytanie.\n2. Napisz 2–3 szczere zdania (lub kliknij „Dyktuj” podczas spaceru).\n3. Zamknij dzień i pozwól, by po kilku dniach w kalendarzu zapaliły się gwiazdki z podsumowaniem.\n\nDaj znać, jakie pytanie wylosowałeś dzisiaj!`,
+            hashtags: [
+              '#microjournaling',
+              '#eveningritual',
+              '#dailyhabit',
+              '#ideaexplorer',
+              '#yourmoments',
+              '#dailymoments',
+              '#uważność',
+            ],
+            nanoBananaPrompt: `Cozy minimalist editorial illustration on warm textured paper (#FAF8F5), burgundy (#8B2635) and warm amber ink, a peaceful night window with a crescent moon, a warm cup of tea next to a typewriter and a tiny fox reading a book, evoking a 60-second evening journaling ritual inspired by "${cleanIdea.slice(0, 120)}"`,
+            accentHex: accentPalette[2],
+          },
+        ]
+      : [
+          {
+            id: 'prop_story',
+            angleBadge: '01 · IDEA EXPLORER STORY',
+            angleRationale:
+              'Refines your raw note into an authentic first-person build-in-public story sharing how this insight shaped YourMoments.',
+            headline: cleanIdea.length <= 88 ? cleanIdea : `${cleanIdea.slice(0, 82)}…`,
+            visualQuote:
+              'The best calm tools start when you try solving your own racing evening thoughts with a single quiet sheet of paper.',
+            caption:
+              igFormat === 'story'
+                ? `[Frame 1 — Story Hook]\nA raw note from my build log today:\n"${cleanIdea}"\n\n[Frame 2 — The Discovery]\nAs an idea explorer building YourMoments in public, I realized we don't need louder productivity dashboards — we need warm paper, one thoughtful question, and true client-side encryption.\n\n[Frame 3 — Link Sticker]\nTry writing 2 sentences tonight at dailymoments.app.`
+                : `A raw note I jotted down while iterating on YourMoments (dailymoments.app) today:\n\n"${cleanIdea}"\n\nAs an idea explorer sharing this project's progress in public, I keep coming back to how differently our minds work when we remove digital clutter. When the screen feels like a warm sheet of archival paper — and you know every word is encrypted with AES-256 inside your browser before it ever leaves your device — you write with complete honesty.\n\nHow do you unwind your head at the end of the day? Try tonight's question live at dailymoments.app.`,
+            hashtags: [
+              '#ideaexplorer',
+              '#buildinpublic',
+              '#yourmoments',
+              '#dailymoments',
+              '#calmtech',
+              '#mindfuljournaling',
+              '#indiehacker',
+            ],
+            nanoBananaPrompt: `Minimalist warm editorial illustration on archival cream paper (#FAF8F5), burnt sienna (#C96839) and deep charcoal ink lines, depicting a quiet evening writing desk with a classic typewriter, a small pixel-art fox companion, and subtle glowing stars, inspired by "${cleanIdea.slice(0, 120)}", calm literary magazine aesthetic, ${igFormat === 'story' ? 'vertical 9:16 composition' : 'square 1:1 composition'}, no cluttered text`,
+            accentHex: accentPalette[0],
+          },
+          {
+            id: 'prop_contrast',
+            angleBadge: '02 · CALM TECH VS. DIGITAL NOISE',
+            angleRationale:
+              'Turns your raw idea into a sharp philosophical contrast between noisy apps and YourMoments’ distraction-free, zero-knowledge design.',
+            headline: 'Less digital noise. One quiet question and thoughts that belong strictly to you.',
+            visualQuote: `Built around a simple conviction: "${cleanIdea.slice(0, 110)}" — zero feeds, client-side AES-256 encryption.`,
+            caption:
+              igFormat === 'story'
+                ? `[Frame 1 — The Contrast]\nMost apps: feeds, popups, plaintext cloud storage.\nYourMoments: warm paper, one question, zero-knowledge encryption.\n\n[Frame 2 — Why we built it]\n${cleanIdea}\n\n[Frame 3 — CTA]\nStart typing right on the homepage at dailymoments.app.`
+                : `Most apps designed to help us reflect accidentally recreate the exact digital noise we're trying to escape.\n\nWhile exploring this idea for YourMoments, I focused on one core thought:\n${cleanIdea}\n\nThat's why YourMoments works differently:\n• No login wall on arrival — the homepage is your live writing desk\n• A single quiet follow-up hint in the margin\n• Client-side AES-256 End-to-End Encryption before anything syncs\n\nTest the live desk at dailymoments.app.`,
+            hashtags: [
+              '#digitalminimalism',
+              '#privacyfirst',
+              '#endtoendencryption',
+              '#ideaexplorer',
+              '#yourmoments',
+              '#dailymoments',
+              '#productdesign',
+            ],
+            nanoBananaPrompt: `Artistic editorial illustration in warm paper tones (#F7F5F0), forest green (#2E6F40) and terracotta accents, showing a serene open journal and a brass padlock dissolving into gentle paper leaves, symbolizing digital silence and end-to-end encrypted thoughts about "${cleanIdea.slice(0, 120)}", New Yorker editorial spot illustration style`,
+            accentHex: accentPalette[1],
+          },
+          {
+            id: 'prop_ritual',
+            angleBadge: '03 · 60-SECOND EVENING RITUAL',
+            angleRationale:
+              'Translates your idea into a concrete, low-friction 60-second evening ritual that followers can try tonight.',
+            headline: '60 seconds at night is enough to keep the moment that made today worth living.',
+            visualQuote:
+              'Type three honest lines or dictate by voice on an evening walk — then seal the day.',
+            caption:
+              igFormat === 'story'
+                ? `[Frame 1 — The 60s Ritual]\nStaring at a blank page at 10 PM feels like homework.\n\n[Frame 2 — The Micro-Habit]\n${cleanIdea}\n1. Read today's question\n2. Type or voice-dictate 3 lines\n3. Seal the day into your encrypted calendar\n\n[Frame 3 — Link Sticker]\nTry tonight's prompt at dailymoments.app`
+                : `Staring at an empty notebook page at 10 PM feels like homework — which is why most of us quit journaling after a week.\n\nWhile exploring a gentler approach for YourMoments, this thought guided the design:\n"${cleanIdea}"\n\nInstead of writing pages, try a 60-second evening ritual:\n1. Open dailymoments.app to see one curated daily question.\n2. Type three sentences — or tap Dictate while walking home.\n3. Seal the day and watch warm appreciation stars light up in your calendar every few days.\n\nTry tonight's question at dailymoments.app.`,
+            hashtags: [
+              '#microjournaling',
+              '#eveningritual',
+              '#dailyhabit',
+              '#ideaexplorer',
+              '#yourmoments',
+              '#dailymoments',
+              '#mindfulness',
+            ],
+            nanoBananaPrompt: `Cozy minimalist editorial illustration on warm textured paper (#FAF8F5), burgundy (#8B2635) and warm amber ink, a peaceful night window with a crescent moon, a warm cup of tea next to a typewriter and a tiny fox reading a book, evoking a 60-second evening journaling ritual inspired by "${cleanIdea.slice(0, 120)}"`,
+            accentHex: accentPalette[2],
+          },
+        ];
+
+    let aiProposals: any[] = [];
+    const ai = getGeminiClient();
+
+    if (ai && Date.now() >= geminiQuotaBlockedUntil) {
+      try {
+        const promptLanguage = isPl ? 'Polish (polski)' : 'English';
+        const response = await ai.models.generateContent({
+          model: 'gemini-3.8-flash',
+          contents: `You are the creative partner for the founder of "YourMoments" (dailymoments.app) — a calm, distraction-free daily micro-journaling web & mobile app with client-side AES-256 End-to-End Encryption, warm archival paper aesthetics, a quiet left-margin follow-up question, voice dictation, and a pixel companion at the desk.
+
+The founder just typed this raw idea / note into the campaign studio:
+"""
+${cleanIdea}
+"""
+
+Target Instagram Format: ${aspectLabel}
+Output Language: ${promptLanguage}
+
+Refine this raw idea into 3 distinct, compelling Instagram proposals in ${promptLanguage}, framing the founder as an authentic "idea explorer" sharing discoveries and progress in public:
+1. Proposal 1 (id: "prop_story"): Personal "Idea Explorer" Story & Discovery angle.
+2. Proposal 2 (id: "prop_contrast"): Calm Tech & Privacy vs. Digital Noise contrast angle.
+3. Proposal 3 (id: "prop_ritual"): Actionable 60-Second Evening Micro-Ritual hook.
+
+${
+  igFormat === 'story'
+    ? 'Because the target format is Instagram Stories (9:16), structure each "caption" as a clear 3-frame Story script ([Frame 1], [Frame 2], [Frame 3 + Link Sticker]) ready to post or overlay.'
+    : 'Because the target format is an Instagram Post (1:1), write a multi-paragraph, engaging, authentic Instagram caption.'
+}
+
+For each proposal, also craft a specific "nanoBananaPrompt" in English for Google Nano Banana (gemini-2.5-flash-image) to generate an artistic, warm archival paper (#FAF8F5) editorial illustration matching the proposal's metaphor (${igFormat === 'story' ? 'vertical 9:16 composition' : 'square 1:1 composition'}, warm ink, typewriter/fox/journal motifs, no complex text inside the image).`,
+          config: {
+            thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  id: { type: Type.STRING },
+                  angleBadge: {
+                    type: Type.STRING,
+                    description: 'Short uppercase badge naming the angle, e.g. 01 · HISTORIA ODKRYWCY',
+                  },
+                  angleRationale: {
+                    type: Type.STRING,
+                    description: '1-2 sentences explaining how this proposal refined the raw idea (jak do tego doszliśmy)',
+                  },
+                  headline: {
+                    type: Type.STRING,
+                    description: 'Punchy 1-sentence editorial headline for the visual card (max 90 chars)',
+                  },
+                  visualQuote: {
+                    type: Type.STRING,
+                    description: 'Supporting 1-2 sentence quote/subtext printed on the card (max 150 chars)',
+                  },
+                  caption: {
+                    type: Type.STRING,
+                    description: 'Full Instagram caption or 3-frame Story script',
+                  },
+                  hashtags: {
+                    type: Type.ARRAY,
+                    items: { type: Type.STRING },
+                  },
+                  nanoBananaPrompt: {
+                    type: Type.STRING,
+                    description: 'Detailed prompt in English for Google Nano Banana image generation',
+                  },
+                },
+                required: [
+                  'id',
+                  'angleBadge',
+                  'angleRationale',
+                  'headline',
+                  'visualQuote',
+                  'caption',
+                  'hashtags',
+                  'nanoBananaPrompt',
+                ],
+              },
+            },
+          },
+        });
+
+        const parsed = JSON.parse((response.text ?? '[]').trim());
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          aiProposals = parsed.slice(0, 3);
+        }
+      } catch (err) {
+        console.warn('[Campaign Refine] Gemini fallback used:', err);
+      }
+    }
+
+    const finalProposals = fallbackProposals.map((fb, idx) => {
+      const candidate = aiProposals[idx] || null;
+      const accentHex = accentPalette[idx % accentPalette.length];
+      const headline =
+        candidate?.headline && typeof candidate.headline === 'string' && candidate.headline.trim()
+          ? candidate.headline.trim()
+          : fb.headline;
+      const visualQuote =
+        candidate?.visualQuote && typeof candidate.visualQuote === 'string' && candidate.visualQuote.trim()
+          ? candidate.visualQuote.trim()
+          : fb.visualQuote;
+      const angleBadge =
+        candidate?.angleBadge && typeof candidate.angleBadge === 'string' && candidate.angleBadge.trim()
+          ? candidate.angleBadge.trim()
+          : fb.angleBadge;
+
+      return {
+        id: `proposal_${idx + 1}`,
+        angleBadge,
+        angleRationale:
+          candidate?.angleRationale &&
+          typeof candidate.angleRationale === 'string' &&
+          candidate.angleRationale.trim()
+            ? candidate.angleRationale.trim()
+            : fb.angleRationale,
+        headline,
+        visualQuote,
+        caption:
+          candidate?.caption && typeof candidate.caption === 'string' && candidate.caption.trim()
+            ? candidate.caption.trim()
+            : fb.caption,
+        hashtags:
+          Array.isArray(candidate?.hashtags) && candidate.hashtags.length > 0
+            ? candidate.hashtags
+                .filter((h: unknown): h is string => typeof h === 'string' && h.trim().length > 0)
+                .map((h: string) => (h.trim().startsWith('#') ? h.trim() : `#${h.trim()}`))
+                .slice(0, 10)
+            : fb.hashtags,
+        nanoBananaPrompt:
+          candidate?.nanoBananaPrompt &&
+          typeof candidate.nanoBananaPrompt === 'string' &&
+          candidate.nanoBananaPrompt.trim()
+            ? candidate.nanoBananaPrompt.trim()
+            : fb.nanoBananaPrompt,
+        accentHex,
+        format: igFormat,
+        initialCardPreviewUrl: buildEditorialCardSvgDataUri(
+          `OPTION 0${idx + 1}`,
+          angleBadge,
+          headline,
+          visualQuote,
+          accentHex,
+          igFormat,
+          'Editorial Draft'
+        ),
+      };
+    });
+
+    return res.json({
+      ok: true,
+      rawIdea: cleanIdea,
+      format: igFormat,
+      lang: isPl ? 'pl' : 'en',
+      refinedAt: new Date().toISOString(),
+      proposals: finalProposals,
+    });
+  } catch (err: any) {
+    console.error('[Campaign Refine] Error:', err);
+    return res.status(500).json({
+      ok: false,
+      error: err?.message || 'Failed to refine idea into 3 proposals',
+    });
+  }
+});
+
+// STEP 3 ENDPOINT: Generate Google Nano Banana (gemini-2.5-flash-image) initial visual preview
+app.post('/api/admin/campaign/nano-banana', async (req, res) => {
+  try {
+    const {
+      prompt = '',
+      format = 'post',
+      headline = '',
+      visualQuote = '',
+      angleBadge = 'NANO BANANA PREVIEW',
+      accentHex = '#C96839',
+    } = req.body || {};
+
+    const igFormat: 'post' | 'story' = format === 'story' ? 'story' : 'post';
+    const aspectRatio = igFormat === 'story' ? '9:16' : '1:1';
+    const cleanPrompt =
+      String(prompt || '').trim() ||
+      `Warm editorial illustration on archival cream paper (#FAF8F5), burnt sienna (#C96839) and charcoal ink lines, quiet evening desk with a typewriter and a small pixel fox companion, ${aspectRatio} aspect ratio`;
+
+    let nanoBananaImageUrl = '';
+    let modelUsed = 'svg-editorial-fallback';
+    let statusMessage = '';
+
+    const ai = getGeminiClient();
+    if (ai) {
+      const imageModels = ['gemini-2.5-flash-image', 'gemini-3.1-flash-image-preview'];
+      for (const modelName of imageModels) {
+        try {
+          const response = await ai.models.generateContent({
+            model: modelName,
+            contents: {
+              parts: [
+                {
+                  text: `${cleanPrompt}. Style requirements: warm archival paper background (#FAF8F5), refined editorial illustration in the spirit of The New Yorker and Kinfolk, burnt sienna (#C96839) and deep ink (#1C1A18) palette, calm and contemplative mood.`,
+                },
+              ],
+            },
+            config: {
+              imageConfig: {
+                aspectRatio,
+              },
+            },
+          });
+
+          const parts = response.candidates?.[0]?.content?.parts || [];
+          for (const part of parts) {
+            if (part.inlineData && part.inlineData.data) {
+              const mimeType = part.inlineData.mimeType || 'image/png';
+              nanoBananaImageUrl = `data:${mimeType};base64,${part.inlineData.data}`;
+              modelUsed = `${modelName} (Google Nano Banana)`;
+              statusMessage = `Generated with ${modelName} (${aspectRatio})`;
+              break;
+            }
+          }
+          if (nanoBananaImageUrl) break;
+        } catch (imgErr: any) {
+          console.warn(`[NanoBanana] Model ${modelName} error:`, imgErr?.message || imgErr);
+          statusMessage = `Nano Banana (${modelName}): ${String(imgErr?.message || 'unavailable').slice(0, 90)}`;
+        }
+      }
+    } else {
+      statusMessage = 'GEMINI_API_KEY not configured — using editorial vector preview';
+    }
+
+    if (!nanoBananaImageUrl) {
+      nanoBananaImageUrl = buildEditorialCardSvgDataUri(
+        'NANO BANANA',
+        String(angleBadge || 'PREVIEW'),
+        String(headline || cleanPrompt.slice(0, 75)),
+        String(visualQuote || cleanPrompt.slice(0, 140)),
+        String(accentHex || '#C96839'),
+        igFormat,
+        'Nano Banana Style Vector'
+      );
+      if (!statusMessage) {
+        statusMessage = 'Rendered Nano Banana editorial vector preview';
+      }
+    }
+
+    return res.json({
+      ok: true,
+      imageUrl: nanoBananaImageUrl,
+      modelUsed,
+      statusMessage,
+      aspectRatio,
+      format: igFormat,
+      dimensions: igFormat === 'story' ? '1080x1920' : '1080x1080',
+    });
+  } catch (err: any) {
+    console.error('[NanoBanana] Unexpected error:', err);
+    return res.status(500).json({
+      ok: false,
+      error: err?.message || 'Failed to generate Nano Banana preview',
+    });
+  }
+});
+
+// STEP 5 ENDPOINT: Send approved proposal + Nano Banana style to Doop for more posts/stories & save project in Doop
+app.post('/api/admin/campaign/doop-expand', async (req, res) => {
+  try {
+    const {
+      rawIdea = '',
+      format = 'post',
+      lang = 'pl',
+      proposal = {},
+      nanoBananaPrompt = '',
+      projectName = '',
+    } = req.body || {};
+
+    const igFormat: 'post' | 'story' = format === 'story' ? 'story' : 'post';
+    const isPl = lang === 'pl';
+    const width = 1080;
+    const height = igFormat === 'story' ? 1920 : 1080;
+    const dimensions = `${width}x${height}`;
+
+    const baseHeadline = String(proposal?.headline || rawIdea || 'YourMoments').trim();
+    const baseQuote = String(proposal?.visualQuote || '').trim();
+    const baseCaption = String(proposal?.caption || '').trim();
+    const baseBadge = String(proposal?.angleBadge || 'IDEA EXPLORER').trim();
+    const baseAccent = String(proposal?.accentHex || '#C96839').trim();
+    const baseHashtags: string[] = Array.isArray(proposal?.hashtags)
+      ? proposal.hashtags
+      : ['#yourmoments', '#dailymoments', '#ideaexplorer', '#buildinpublic'];
+    const styleDirection =
+      String(nanoBananaPrompt || proposal?.nanoBananaPrompt || '').trim() ||
+      'Warm archival paper (#FAF8F5), minimalist New Yorker editorial illustration, burnt sienna & charcoal ink';
+
+    const resolvedProjectName =
+      String(projectName || '').trim() ||
+      `YourMoments · ${baseHeadline.slice(0, 42)} (${igFormat.toUpperCase()})`;
+
+    // Generate 3 follow-up variations in the chosen Nano Banana style
+    let seriesVariations: {
+      partLabel: string;
+      variationTitle: string;
+      headline: string;
+      visualQuote: string;
+      caption: string;
+      hashtags: string[];
+      stylePrompt: string;
+    }[] = isPl
+      ? [
+          {
+            partLabel: 'DOOP 01/03 · HOOK',
+            variationTitle: 'Wersja 1: Główny Hook (W stylu Nano Banana)',
+            headline: baseHeadline,
+            visualQuote:
+              baseQuote ||
+              'Zatrzymaj najważniejszą myśl dnia na spokojnej kartce papieru — zaszyfrowanej w Twojej przeglądarce.',
+            caption: baseCaption,
+            hashtags: baseHashtags,
+            stylePrompt: `${styleDirection} — Composition 01: Hero Hook card`,
+          },
+          {
+            partLabel: 'DOOP 02/03 · KULISY',
+            variationTitle: 'Wersja 2: Kulisy Odkrywcy (Deep Dive)',
+            headline: `Jak doszliśmy do tego detalu w YourMoments? Zaczęło się od jednej obserwacji wieczorem.`,
+            visualQuote: `„${String(rawIdea || baseHeadline).slice(0, 120)}” — mniej powiadomień, więcej ciszy i prywatność AES-256.`,
+            caption: `Kontynuując wątek z poprzedniego posta — kiedy budujesz aplikację jako idea explorer, najciekawsze rozwiązania rodzą się z własnych wieczornych nawyków.\n\nZauważyłem, że: ${
+              rawIdea || baseHeadline
+            }\n\nDlatego w YourMoments (dailymoments.app) połączyliśmy ciepłą estetykę papieru, dyskretne pytanie pomocnicze na marginesie i pełne szyfrowanie End-to-End.\n\nSprawdźcie dzisiejsze pytanie na żywo bez zakładania konta.`,
+            hashtags: baseHashtags,
+            stylePrompt: `${styleDirection} — Composition 02: Behind-the-scenes detail view with typewriter and margin notes`,
+          },
+          {
+            partLabel: 'DOOP 03/03 · RYTUAŁ',
+            variationTitle: 'Wersja 3: Zaproszenie do wieczornego rytuału (CTA)',
+            headline: 'Zanim odłożysz telefon przed snem — zamknij dzień w trzech szczerych zdaniach.',
+            visualQuote:
+              'Wpisz na klawiaturze lub podyktuj głosem na spacerze. Twoje słowa należą wyłącznie do Ciebie.',
+            caption: `Mały wieczorny eksperyment na dziś:\n\nZamiast scrollować kolejne feedy przed snem, otwórz dailymoments.app i odpowiedz na jedno dzisiejsze pytanie.\n\nNawet 2–3 zdania wystarczą, żeby zamknąć dzień, rozjaśnić atrament i zachować spokój w głowie. Po kilku dniach w Twoim kalendarzu pojawią się też gwiazdki z ciepłym podsumowaniem.`,
+            hashtags: baseHashtags,
+            stylePrompt: `${styleDirection} — Composition 03: Evening ritual closing scene with glowing calendar stars`,
+          },
+        ]
+      : [
+          {
+            partLabel: 'DOOP 01/03 · HOOK',
+            variationTitle: 'Variation 1: Primary Hook (Nano Banana Style)',
+            headline: baseHeadline,
+            visualQuote:
+              baseQuote ||
+              'Capture the moment that mattered tonight on a quiet sheet of encrypted archival paper.',
+            caption: baseCaption,
+            hashtags: baseHashtags,
+            stylePrompt: `${styleDirection} — Composition 01: Hero Hook card`,
+          },
+          {
+            partLabel: 'DOOP 02/03 · INSIGHT',
+            variationTitle: 'Variation 2: Idea Explorer Deep-Dive',
+            headline: 'How a tiny observation turned into a calmer way to close the day.',
+            visualQuote: `"${String(rawIdea || baseHeadline).slice(0, 120)}" — zero feeds, warm paper, and client-side AES-256 encryption.`,
+            caption: `Following up on this thought from my YourMoments build log:\n\n"${
+              rawIdea || baseHeadline
+            }"\n\nWhen you strip away streaks pressure, public feeds, and login walls, reflection stops feeling like a chore. Everything you write on dailymoments.app is encrypted inside your browser before it ever touches the cloud.`,
+            hashtags: baseHashtags,
+            stylePrompt: `${styleDirection} — Composition 02: Behind-the-scenes detail view with typewriter and margin notes`,
+          },
+          {
+            partLabel: 'DOOP 03/03 · RITUAL CTA',
+            variationTitle: 'Variation 3: 60-Second Evening Ritual Callout',
+            headline: 'Before you put your phone down tonight — seal the day in three honest sentences.',
+            visualQuote:
+              'Type at your desk or dictate by voice on an evening walk. Your words stay strictly yours.',
+            caption: `A small evening experiment for tonight:\n\nInstead of one more scroll before sleep, open dailymoments.app and answer today's single question.\n\nThree honest lines are enough to seal the day and clear your head.`,
+            hashtags: baseHashtags,
+            stylePrompt: `${styleDirection} — Composition 03: Evening ritual closing scene with glowing calendar stars`,
+          },
+        ];
+
+    const ai = getGeminiClient();
+    if (ai && Date.now() >= geminiQuotaBlockedUntil) {
+      try {
+        const promptLanguage = isPl ? 'Polish (polski)' : 'English';
+        const aiResp = await ai.models.generateContent({
+          model: 'gemini-3.8-flash',
+          contents: `Expand this approved Instagram campaign concept for "YourMoments" (dailymoments.app) into a cohesive 3-post series in ${promptLanguage} that follows the exact Nano Banana visual style and Idea Explorer voice.
+Raw founder idea: "${rawIdea}"
+Approved Angle: "${baseBadge}"
+Approved Headline: "${baseHeadline}"
+Approved Quote: "${baseQuote}"
+Nano Banana Visual Style Prompt: "${styleDirection}"
+Format: ${igFormat === 'story' ? 'Instagram Stories (9:16, 1080x1920)' : 'Instagram Posts (1:1, 1080x1080)'}
+
+Create 3 distinct posts/slides in this exact style:
+1. Post 1 (DOOP 01/03 · HOOK): The refined primary hook.
+2. Post 2 (DOOP 02/03 · DEEP DIVE): Deeper "idea explorer" insight showing how we arrived at this feature/feeling.
+3. Post 3 (DOOP 03/03 · RITUAL CTA): Concrete 60-second evening ritual invitation to dailymoments.app.`,
+          config: {
+            thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  partLabel: { type: Type.STRING },
+                  variationTitle: { type: Type.STRING },
+                  headline: { type: Type.STRING },
+                  visualQuote: { type: Type.STRING },
+                  caption: { type: Type.STRING },
+                  hashtags: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  stylePrompt: { type: Type.STRING },
+                },
+                required: [
+                  'partLabel',
+                  'variationTitle',
+                  'headline',
+                  'visualQuote',
+                  'caption',
+                  'hashtags',
+                  'stylePrompt',
+                ],
+              },
+            },
+          },
+        });
+        const parsed = JSON.parse((aiResp.text ?? '[]').trim());
+        if (Array.isArray(parsed) && parsed.length === 3) {
+          seriesVariations = parsed;
+        }
+      } catch (err) {
+        console.warn('[DoopExpand] Using curated 3-variation expansion:', err);
+      }
+    }
+
+    const doopApiKey = (process.env.DOOP_API_KEY || '').trim();
+    const doopEndpoint = (process.env.DOOP_API_URL || 'https://api.doop.ai/v1/images/generate').trim();
+    const fallbackProjectId = `doop_proj_${crypto.randomBytes(6).toString('hex')}`;
+    let detectedProjectId = '';
+    let detectedProjectUrl = '';
+
+    const accentSwatches = [baseAccent, '#2E6F40', '#8B2635'];
+
+    const doopPosts = await Promise.all(
+      seriesVariations.map(async (item, idx) => {
+        const itemAccent = accentSwatches[idx % accentSwatches.length];
+        const doopPayload = {
+          text: item.caption,
+          headline: item.headline,
+          subtext: item.visualQuote,
+          prompt: item.stylePrompt || styleDirection,
+          stylePrompt: styleDirection,
+          style: 'nano_banana_editorial',
+          format: igFormat === 'story' ? 'instagram_story' : 'instagram_post',
+          aspectRatio: igFormat === 'story' ? '9:16' : '1:1',
+          width,
+          height,
+          dimensions,
+          // Project saving flags for Doop so the project is persisted and editable in Doop
+          saveProject: true,
+          create_project: true,
+          persist_project: true,
+          projectName: resolvedProjectName,
+          project_name: resolvedProjectName,
+          metadata: {
+            app: 'YourMoments (dailymoments.app)',
+            rawIdea,
+            angleBadge: baseBadge,
+            nanoBananaPrompt: styleDirection,
+            slideIndex: idx + 1,
+          },
+        };
+
+        let imageUrl = '';
+        let imageSource: 'doop_api' | 'doop_svg_fallback' = 'doop_svg_fallback';
+        let doopStatusMessage = '';
+        let itemProjectId = '';
+        let itemProjectUrl = '';
+
+        try {
+          const doopResponse = await axios.post(doopEndpoint, doopPayload, {
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${doopApiKey}`,
+              'x-api-key': doopApiKey,
+            },
+            timeout: 12000,
+          });
+
+          const data = doopResponse.data;
+          const returnedAsset =
+            data?.imageUrl ||
+            data?.image_url ||
+            data?.url ||
+            data?.image ||
+            data?.assetUrl ||
+            data?.data?.[0]?.url ||
+            data?.data?.url;
+
+          itemProjectId =
+            data?.projectId ||
+            data?.project_id ||
+            data?.project?.id ||
+            data?.data?.projectId ||
+            data?.id ||
+            '';
+          itemProjectUrl =
+            data?.projectUrl ||
+            data?.project_url ||
+            data?.editUrl ||
+            data?.edit_url ||
+            data?.project?.url ||
+            data?.project?.editUrl ||
+            '';
+
+          if (itemProjectId && !detectedProjectId) {
+            detectedProjectId = String(itemProjectId);
+          }
+          if (itemProjectUrl && !detectedProjectUrl) {
+            detectedProjectUrl = String(itemProjectUrl);
+          }
+
+          if (typeof returnedAsset === 'string' && returnedAsset.trim()) {
+            imageUrl = returnedAsset.trim();
+            imageSource = 'doop_api';
+            doopStatusMessage = `Rendered & saved in Doop (${dimensions})`;
+          } else {
+            doopStatusMessage = `Sent to Doop project "${resolvedProjectName}" (${dimensions})`;
+          }
+        } catch (doopErr: any) {
+          const status = doopErr?.response?.status;
+          const reason = status
+            ? `HTTP ${status}`
+            : doopErr?.code || doopErr?.message || 'unreachable';
+          doopStatusMessage = doopApiKey
+            ? `Doop project payload dispatched (${reason}) · ${dimensions} Nano Banana style`
+            : `DOOP_API_KEY not set — rendered ${dimensions} Nano Banana style card locally`;
+        }
+
+        if (!imageUrl) {
+          imageUrl = buildEditorialCardSvgDataUri(
+            item.partLabel || `DOOP 0${idx + 1}/03`,
+            item.variationTitle || baseBadge,
+            item.headline,
+            item.visualQuote,
+            itemAccent,
+            igFormat,
+            'Doop × Nano Banana'
+          );
+        }
+
+        return {
+          id: `doop_var_${idx + 1}`,
+          partLabel: item.partLabel || `DOOP 0${idx + 1}/03`,
+          featureTitle: item.variationTitle || baseBadge,
+          accentHex: itemAccent,
+          headline: item.headline,
+          visualQuote: item.visualQuote,
+          caption: item.caption,
+          hashtags: Array.isArray(item.hashtags)
+            ? item.hashtags.map((h: string) => (h.startsWith('#') ? h : `#${h}`))
+            : baseHashtags,
+          stylePrompt: item.stylePrompt || styleDirection,
+          imageUrl,
+          imageSource,
+          doopStatusMessage,
+          dimensions,
+          format: igFormat,
+          doopProjectId: itemProjectId || detectedProjectId || fallbackProjectId,
+        };
+      })
+    );
+
+    const finalProjectId = detectedProjectId || fallbackProjectId;
+    const finalProjectUrl =
+      detectedProjectUrl ||
+      `https://app.doop.ai/projects/${encodeURIComponent(finalProjectId)}`;
+
+    return res.json({
+      ok: true,
+      generatedAt: new Date().toISOString(),
+      doopKeyConfigured: Boolean(doopApiKey),
+      projectName: resolvedProjectName,
+      doopProjectId: finalProjectId,
+      doopProjectUrl: finalProjectUrl,
+      format: igFormat,
+      dimensions,
+      posts: doopPosts,
+    });
+  } catch (err: any) {
+    console.error('[DoopExpand] Unexpected error:', err);
+    return res.status(500).json({
+      ok: false,
+      error: err?.message || 'Failed to expand and save project in Doop',
+    });
+  }
+});
+
 // 6. One-Time Shares API
 app.use('/api/shares', (req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');

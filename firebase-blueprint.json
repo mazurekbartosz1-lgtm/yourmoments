@@ -229,6 +229,120 @@
         }
       },
       "required": ["id", "userId", "date", "encryptedContent", "iv", "salt", "createdAt"]
+    },
+    "CampaignIdeaLineage": {
+      "title": "CampaignIdeaLineage",
+      "description": "Saved Instagram campaign idea lineage capturing the raw idea, Google AI 3-proposal refinement, Nano Banana visual prompt, Doop project metadata, and founder notes",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Campaign idea document ID",
+          "maxLength": 128
+        },
+        "userId": {
+          "type": "string",
+          "description": "Owner/Admin user UID",
+          "maxLength": 128
+        },
+        "rawIdea": {
+          "type": "string",
+          "description": "Original raw idea entered by the founder in the textbox",
+          "maxLength": 4000
+        },
+        "format": {
+          "type": "string",
+          "description": "Instagram format: post (1080x1080) or story (1080x1920)",
+          "enum": ["post", "story"]
+        },
+        "lang": {
+          "type": "string",
+          "description": "Campaign language",
+          "enum": ["pl", "en"]
+        },
+        "selectedAngleTitle": {
+          "type": "string",
+          "description": "Title of the chosen proposal angle from the 3 Google AI refinements",
+          "maxLength": 300
+        },
+        "headline": {
+          "type": "string",
+          "description": "Refined headline for the Instagram visual card",
+          "maxLength": 500
+        },
+        "visualQuote": {
+          "type": "string",
+          "description": "Refined subtext or quote on the visual card",
+          "maxLength": 1000
+        },
+        "caption": {
+          "type": "string",
+          "description": "Refined Instagram caption or story script",
+          "maxLength": 8000
+        },
+        "hashtags": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Bounded list (max 15) of Instagram hashtags"
+        },
+        "nanoBananaPrompt": {
+          "type": "string",
+          "description": "Visual prompt used for Google Nano Banana initial preview",
+          "maxLength": 3000
+        },
+        "lineageSummary": {
+          "type": "string",
+          "description": "How we arrived at this final concept (all 3 AI proposals and reasoning path)",
+          "maxLength": 12000
+        },
+        "userNotes": {
+          "type": "string",
+          "description": "Founder notes on why this idea worked or what to iterate",
+          "maxLength": 2000
+        },
+        "doopProjectId": {
+          "type": "string",
+          "description": "Saved project ID in Doop for further editing",
+          "maxLength": 256
+        },
+        "doopProjectUrl": {
+          "type": "string",
+          "description": "URL or reference to the saved Doop project",
+          "maxLength": 1000
+        },
+        "doopPostCount": {
+          "type": "integer",
+          "description": "Number of posts/slides generated in Doop in Nano Banana style"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Creation server timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Last update server timestamp"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "rawIdea",
+        "format",
+        "lang",
+        "selectedAngleTitle",
+        "headline",
+        "visualQuote",
+        "caption",
+        "hashtags",
+        "nanoBananaPrompt",
+        "lineageSummary",
+        "userNotes",
+        "doopProjectId",
+        "doopProjectUrl",
+        "doopPostCount",
+        "createdAt",
+        "updatedAt"
+      ]
     }
   },
   "firestore": {
@@ -247,6 +361,10 @@
     "/feedback/{feedbackId}": {
       "schema": "Feedback",
       "description": "Stores user feedback submissions"
+    },
+    "/campaign_ideas/{ideaId}": {
+      "schema": "CampaignIdeaLineage",
+      "description": "Stores saved Instagram campaign ideas, their 3-step AI refinement lineage, Nano Banana prompts, and Doop project references"
     }
   }
 }

@@ -94,6 +94,29 @@ service cloud.firestore {
         && data.createdAt is timestamp;
     }
 
+    function isValidCampaignIdea(data) {
+      return data.keys().hasAll(['id', 'userId', 'rawIdea', 'format', 'lang', 'selectedAngleTitle', 'headline', 'visualQuote', 'caption', 'hashtags', 'nanoBananaPrompt', 'lineageSummary', 'userNotes', 'doopProjectId', 'doopProjectUrl', 'doopPostCount', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'userId', 'rawIdea', 'format', 'lang', 'selectedAngleTitle', 'headline', 'visualQuote', 'caption', 'hashtags', 'nanoBananaPrompt', 'lineageSummary', 'userNotes', 'doopProjectId', 'doopProjectUrl', 'doopPostCount', 'createdAt', 'updatedAt'])
+        && data.id is string && data.id.size() > 0 && data.id.size() <= 128
+        && data.userId is string && data.userId.size() > 0 && data.userId.size() <= 128
+        && data.rawIdea is string && data.rawIdea.size() >= 1 && data.rawIdea.size() <= 4000
+        && data.format in ['post', 'story']
+        && data.lang in ['pl', 'en']
+        && data.selectedAngleTitle is string && data.selectedAngleTitle.size() <= 300
+        && data.headline is string && data.headline.size() <= 500
+        && data.visualQuote is string && data.visualQuote.size() <= 1000
+        && data.caption is string && data.caption.size() <= 8000
+        && data.hashtags is list && data.hashtags.size() <= 15 && (data.hashtags.size() == 0 || (data.hashtags[0] is string && data.hashtags[0].size() <= 120))
+        && data.nanoBananaPrompt is string && data.nanoBananaPrompt.size() <= 3000
+        && data.lineageSummary is string && data.lineageSummary.size() <= 12000
+        && data.userNotes is string && data.userNotes.size() <= 2000
+        && data.doopProjectId is string && data.doopProjectId.size() <= 256
+        && data.doopProjectUrl is string && data.doopProjectUrl.size() <= 1000
+        && data.doopPostCount is int && data.doopPostCount >= 0 && data.doopPostCount <= 50
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
     match /users/{userId} {
       allow get: if (isOwner(userId) || isAdmin()) && isValidId(userId);
       allow list: if isAdmin();
@@ -150,6 +173,37 @@ service cloud.firestore {
         && incoming().createdAt == request.time;
       allow update: if false;
       allow delete: if isSignedIn() && isValidId(feedbackId) && (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    match /campaign_ideas/{ideaId} {
+      allow get: if isSignedIn() && isValidId(ideaId) && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidId(ideaId)
+        && isValidCampaignIdea(incoming())
+        && incoming().id == ideaId
+        && incoming().userId == request.auth.uid
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isSignedIn() && isValidId(ideaId)
+        && isValidCampaignIdea(incoming())
+        && incoming().id == ideaId
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (existing().userId == request.auth.uid || isAdmin())
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'headline',
+          'visualQuote',
+          'caption',
+          'hashtags',
+          'nanoBananaPrompt',
+          'userNotes',
+          'doopProjectId',
+          'doopProjectUrl',
+          'doopPostCount',
+          'updatedAt'
+        ]);
+      allow delete: if isSignedIn() && isValidId(ideaId) && (existing().userId == request.auth.uid || isAdmin());
     }
   }
 }
