@@ -1,6 +1,7 @@
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
-import { GoogleGenAI, ThinkingLevel } from '@google/genai';
+import { GoogleGenAI, ThinkingLevel, Type } from '@google/genai';
+import axios from 'axios';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
@@ -702,7 +703,446 @@ Return strictly valid JSON with two keys:
     }
   });
 
-  // 6. One-Time Encrypted Entry Sharing with PIN (Self-destructs immediately upon first valid read)
+  // 5b. Internal Marketing Feature: 3-Part Instagram Campaign Generator + Doop API (1080x1080 Square Images)
+  function buildDoopFallbackSvgDataUri(
+    partNumber: string,
+    featureBadge: string,
+    headline: string,
+    quoteSnippet: string,
+    accentHex: string,
+    featureId: string
+  ): string {
+    const safeBadge = escapeHtml(featureBadge.toUpperCase());
+    const safeHeadline = escapeHtml(headline);
+    const safeSnippet = escapeHtml(quoteSnippet);
+
+    // Wrap headline into balanced lines (~26 chars per line)
+    const wrapLines = (text: string, maxChars: number, maxLines: number): string[] => {
+      const words = text.split(/\s+/).filter(Boolean);
+      const lines: string[] = [];
+      let current = '';
+      for (const word of words) {
+        if ((current + ' ' + word).trim().length <= maxChars) {
+          current = (current + ' ' + word).trim();
+        } else {
+          if (current) lines.push(current);
+          current = word;
+          if (lines.length >= maxLines - 1) break;
+        }
+      }
+      const consumedWords = lines.join(' ').split(/\s+/).filter(Boolean).length;
+      const remainder = words.slice(consumedWords).join(' ');
+      if (remainder) {
+        lines.push(remainder.length > maxChars + 8 ? remainder.slice(0, maxChars + 5) + '…' : remainder);
+      }
+      return lines.slice(0, maxLines);
+    };
+
+    const headlineLines = wrapLines(safeHeadline, 26, 3);
+    const snippetLines = wrapLines(safeSnippet, 44, 4);
+
+    const headlineTspans = headlineLines
+      .map((line, idx) => `<tspan x="96" dy="${idx === 0 ? 0 : 68}">${line}</tspan>`)
+      .join('');
+
+    const snippetStartY = 360 + headlineLines.length * 68;
+    const snippetTspans = snippetLines
+      .map((line, idx) => `<tspan x="124" dy="${idx === 0 ? 0 : 44}">${line}</tspan>`)
+      .join('');
+
+    const iconIllustration =
+      featureId === 'e2ee'
+        ? `<g transform="translate(830, 110)">
+            <rect x="0" y="0" width="154" height="154" rx="32" fill="#EBF2EB" stroke="#1C1A18" stroke-width="3"/>
+            <path d="M55 72 V54 C55 41 65 31 77 31 C89 31 99 41 99 54 V72" fill="none" stroke="#1C1A18" stroke-width="4.5" stroke-linecap="round"/>
+            <rect x="43" y="72" width="68" height="52" rx="10" fill="${accentHex}" stroke="#1C1A18" stroke-width="4"/>
+            <circle cx="77" cy="94" r="5" fill="#FAF8F5"/>
+            <line x1="77" y1="99" x2="77" y2="110" stroke="#FAF8F5" stroke-width="4" stroke-linecap="round"/>
+          </g>`
+        : featureId === 'minimal_ui'
+        ? `<g transform="translate(830, 110)">
+            <rect x="0" y="0" width="154" height="154" rx="32" fill="#F5DCE3" stroke="#1C1A18" stroke-width="3"/>
+            <rect x="34" y="34" width="86" height="86" rx="10" fill="#FAF8F5" stroke="#1C1A18" stroke-width="3.5"/>
+            <line x1="50" y1="58" x2="104" y2="58" stroke="#1C1A18" stroke-width="3.5" stroke-linecap="round"/>
+            <line x1="50" y1="76" x2="96" y2="76" stroke="#1C1A18" stroke-width="3.5" stroke-linecap="round"/>
+            <line x1="50" y1="94" x2="82" y2="94" stroke="#8B2635" stroke-width="3.5" stroke-linecap="round"/>
+          </g>`
+        : `<g transform="translate(830, 110)">
+            <rect x="0" y="0" width="154" height="154" rx="32" fill="#EFECE4" stroke="#1C1A18" stroke-width="3"/>
+            <circle cx="94" cy="58" r="18" fill="#EBC5CF" stroke="#1C1A18" stroke-width="3.5"/>
+            <path d="M40 104 H108 C118 104 123 95 119 86 C116 79 109 77 104 79 C100 65 86 58 74 63 C65 56 51 60 48 72 C38 73 30 81 31 91 C31 98 35 104 40 104 Z" fill="#FAF8F5" stroke="#1C1A18" stroke-width="3.5" stroke-linejoin="round"/>
+          </g>`;
+
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width="1080" height="1080">
+      <rect width="1080" height="1080" fill="#F7F5F0"/>
+      <rect x="44" y="44" width="992" height="992" rx="36" fill="#FAF8F5" stroke="#E5DFD3" stroke-width="3"/>
+      
+      <!-- Top Editorial Meta Bar -->
+      <rect x="96" y="114" width="380" height="46" rx="23" fill="#F2EFE8" stroke="#DDD6C8" stroke-width="2"/>
+      <circle cx="124" cy="137" r="7" fill="${accentHex}"/>
+      <text x="144" y="143" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18" font-weight="600" fill="#524D46" letter-spacing="1.5">${partNumber} · ${safeBadge}</text>
+
+      ${iconIllustration}
+
+      <!-- Main Editorial Headline -->
+      <text x="96" y="310" font-family="Georgia, 'Times New Roman', serif" font-size="54" font-weight="500" fill="#1C1A18">${headlineTspans}</text>
+
+      <!-- Quote / Reflection Callout Box -->
+      <rect x="96" y="${snippetStartY - 46}" width="6" height="${snippetLines.length * 44 + 34}" rx="3" fill="${accentHex}"/>
+      <text x="124" y="${snippetStartY}" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-size="31" fill="#524D46">${snippetTspans}</text>
+
+      <!-- Bottom Brand & Idea Explorer Footer -->
+      <line x1="96" y1="880" x2="984" y2="880" stroke="#E5DFD3" stroke-width="2"/>
+      
+      <!-- Minimal Fox & Typewriter Emblem -->
+      <g transform="translate(96, 912)">
+        <rect x="0" y="0" width="56" height="56" rx="14" fill="#F2EFE8" stroke="#1C1A18" stroke-width="2.5"/>
+        <polygon points="14,24 20,10 28,22" fill="#C96839" stroke="#1C1A18" stroke-width="2"/>
+        <polygon points="42,24 36,10 28,22" fill="#C96839" stroke="#1C1A18" stroke-width="2"/>
+        <rect x="14" y="20" width="28" height="22" rx="4" fill="#C96839" stroke="#1C1A18" stroke-width="2"/>
+        <circle cx="22" cy="29" r="2.2" fill="#1C1A18"/>
+        <circle cx="34" cy="29" r="2.2" fill="#1C1A18"/>
+        <rect x="12" y="42" width="32" height="7" rx="2" fill="#33302B"/>
+      </g>
+
+      <text x="172" y="936" font-family="Georgia, 'Times New Roman', serif" font-size="28" font-weight="600" fill="#1C1A18">YourMoments · Notes from an Idea Explorer</text>
+      <text x="172" y="966" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="20" fill="#7A756D">dailymoments.app · 1080×1080 Campaign</text>
+
+      <rect x="770" y="914" width="214" height="52" rx="12" fill="${accentHex}"/>
+      <text x="877" y="947" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="20" font-weight="600" fill="#FAF8F5">dailymoments.app</text>
+    </svg>`;
+
+    return `data:image/svg+xml;base64,${Buffer.from(svg, 'utf-8').toString('base64')}`;
+  }
+
+  app.post('/api/admin/campaign/generate', async (req, res) => {
+    const { lang = 'en', customNote = '' } = req.body || {};
+    const isPl = lang === 'pl';
+
+    interface CampaignFeatureSpec {
+      id: 'e2ee' | 'minimal_ui' | 'daily_habit';
+      partLabel: string;
+      featureTitle: string;
+      accentHex: string;
+      defaultHeadline: string;
+      defaultVisualQuote: string;
+      defaultCaption: string;
+      defaultHashtags: string[];
+    }
+
+    const featureSpecs: CampaignFeatureSpec[] = isPl
+      ? [
+          {
+            id: 'e2ee',
+            partLabel: 'PART 01/03',
+            featureTitle: 'Szyfrowanie End-to-End (AES-256)',
+            accentHex: '#2E6F40',
+            defaultHeadline: 'Prywatność nie powinna być płatnym dodatkiem do Twoich własnych myśli.',
+            defaultVisualQuote:
+              'Każde słowo jest szyfrowane kluczem AES-256 w Twojej przeglądarce, zanim opuści urządzenie. Nawet baza danych widzi wyłącznie szyfrogram.',
+            defaultCaption: `Odkąd zacząłem eksplorować pomysł na YourMoments (dailymoments.app), jedno pytanie nie dawało mi spokoju: dlaczego większość aplikacji do pisania traktuje nasze najbardziej osobiste myśli jak dane treningowe na serwerze?\n\nJako odkrywca pomysłów (idea explorer) budujący ten projekt krok po kroku, postawiłem na jedną twardą zasadę: pełne szyfrowanie End-to-End (AES-GCM 256) bezpośrednio w przeglądarce.\n\nZanim Twój wpis trafi do chmury, zamienia się w nieczytelny szyfrogram. Ani ja, ani żaden serwer nie możemy przeczytać ani jednego Twojego zdania. Twoje wieczorne zapiski należą wyłącznie do Ciebie.\n\nTestuję to podejście codziennie na sobie — jeśli szukasz cichego miejsca na własne myśli, sprawdź dailymoments.app.`,
+            defaultHashtags: [
+              '#buildinpublic',
+              '#ideaexplorer',
+              '#yourmoments',
+              '#dailymoments',
+              '#privacyfirst',
+              '#e2ee',
+              '#mindfuljournaling',
+              '#indiehacker',
+            ],
+          },
+          {
+            id: 'minimal_ui',
+            partLabel: 'PART 02/03',
+            featureTitle: 'Minimalistyczny interfejs bez rozpraszaczy',
+            accentHex: '#C96839',
+            defaultHeadline: 'Mniej powiadomień. Jedna spokojna kartka papieru i cichy towarzysz przy biurku.',
+            defaultVisualQuote:
+              'Zero feedów, zero wyskakujących okienek. Tylko ciepły papier, jedno pytanie i dyskretna podpowiedź na marginesie.',
+            defaultCaption: `Eksplorując kolejne prototypy YourMoments, zauważyłem coś paradoksalnego: większość aplikacji do produktywności i journalingu męczy nas dokładnie tak samo, jak media społecznościowe — dziesiątkami zakładek, wykresów i odznak.\n\nPostanowiłem pójść w zupełnie inną stronę. Zaprojektowałem ekran, który przypomina ciepłą kartkę papieru połączoną z klasyczną maszyną do pisania. Obok tekstu pojawia się tylko jedno ciche pytanie pomocnicze na marginesie, a na dole przy biurku siedzi mały pikselowy lisek, który stuka w klawisze w Twoim rytmie.\n\nKiedy otwierasz stronę, nie musisz nawet zakładać konta — po prostu zaczynasz pisać. Dajcie znać, jak podoba Wam się taki kierunek spokojnej technologii.`,
+            defaultHashtags: [
+              '#calmtech',
+              '#minimaldesign',
+              '#ideaexplorer',
+              '#buildinpublic',
+              '#yourmoments',
+              '#distractionfree',
+              '#digitalminimalism',
+              '#uxdesign',
+            ],
+          },
+          {
+            id: 'daily_habit',
+            partLabel: 'PART 03/03',
+            featureTitle: 'Codzienny rytuał mikro-dziennika',
+            accentHex: '#8B2635',
+            defaultHeadline: 'Nie potrzebujesz godziny dziennie, żeby zatrzymać najważniejszy moment dnia.',
+            defaultVisualQuote:
+              'Jedno uważne pytanie wieczorem. Trzy zdania na klawiaturze lub podyktowane głosem podczas spaceru — i zamykasz dzień.',
+            defaultCaption: `Przez lata próbowałem prowadzić tradycyjny dziennik i zawsze odpadałem po tygodniu. Pusta biała strona o 22:00 potrafi przytłoczyć.\n\nEksplorując ten problem przy budowie YourMoments, odkryłem, że kluczem nie jest pisanie długich esejów, ale mikro-rytuał, który trwa mniej niż 60 sekund:\n1. Dostajesz jedno uważne pytanie dnia (albo losujesz kategorię bliższą Twojemu nastrojowi).\n2. Piszesz kilka zdań lub dyktujesz myśl głosem podczas wieczornego spaceru.\n3. Klikasz „Zamknij dzień” — atrament jaśnieje, a wspomnienie trafia do zaszyfrowanego kalendarza.\n\nCo kilka zamkniętych dni w kalendarzu zapalają się też gwiazdki z ciepłym podsumowaniem tego, gdzie udało Ci się zwolnić tempo. Możecie przetestować dzisiejsze pytanie od razu na dailymoments.app.`,
+            defaultHashtags: [
+              '#microjournaling',
+              '#dailyhabit',
+              '#ideaexplorer',
+              '#buildinpublic',
+              '#yourmoments',
+              '#mindfulness',
+              '#eveningritual',
+              '#indiedev',
+            ],
+          },
+        ]
+      : [
+          {
+            id: 'e2ee',
+            partLabel: 'PART 01/03',
+            featureTitle: 'End-to-End Encryption (AES-256)',
+            accentHex: '#2E6F40',
+            defaultHeadline: 'Your private thoughts should never be training data on someone else’s server.',
+            defaultVisualQuote:
+              'Every reflection is encrypted with AES-256 directly inside your browser before it ever leaves your device.',
+            defaultCaption: `When I started exploring the idea behind YourMoments (dailymoments.app), one question kept bothering me: why do so many journaling apps store our most personal reflections in plain text on their servers?\n\nAs an idea explorer sharing this project’s progress in public, I wanted privacy to be architectural, not just a marketing promise. Every entry in YourMoments is encrypted client-side using AES-GCM 256 before it ever touches the cloud.\n\nEven if you open the database directly, all that exists is ciphertext. Not even I can read a single word you write.\n\nI’ve been testing this flow every evening — if you’ve been looking for a truly private corner of the internet to think out loud, try writing a line at dailymoments.app.`,
+            defaultHashtags: [
+              '#ideaexplorer',
+              '#buildinpublic',
+              '#yourmoments',
+              '#dailymoments',
+              '#privacyfirst',
+              '#endtoendencryption',
+              '#calmtech',
+              '#indiehacker',
+            ],
+          },
+          {
+            id: 'minimal_ui',
+            partLabel: 'PART 02/03',
+            featureTitle: 'Minimal Distraction-Free Interface',
+            accentHex: '#C96839',
+            defaultHeadline: 'What happens when you strip away feeds, badges, and noise — leaving only warm paper?',
+            defaultVisualQuote:
+              'No dashboards or popups. Just a warm sheet of paper, a quiet margin follow-up question, and a tiny companion typing along.',
+            defaultCaption: `While iterating on the interface for YourMoments, I realized most productivity and journaling tools accidentally recreate the exact digital noise we’re trying to escape.\n\nAs an idea explorer experimenting with calmer software, I tried removing everything that wasn’t essential to the act of reflection:\n• Warm archival paper tones instead of stark white screens\n• A single quiet follow-up question in the left margin that adapts as you write\n• A tiny pixel companion at the desk who types when you type and rests when you pause\n\nYou don’t even hit a login wall — the landing page IS the live writing desk. Would love to hear what you think of this quieter direction.`,
+            defaultHashtags: [
+              '#minimaldesign',
+              '#calmtech',
+              '#ideaexplorer',
+              '#buildinpublic',
+              '#yourmoments',
+              '#distractionfree',
+              '#digitalminimalism',
+              '#productdesign',
+            ],
+          },
+          {
+            id: 'daily_habit',
+            partLabel: 'PART 03/03',
+            featureTitle: 'Daily Micro-Journaling Habit',
+            accentHex: '#8B2635',
+            defaultHeadline: 'A 60-second evening ritual beats a blank page you never open.',
+            defaultVisualQuote:
+              'One thoughtful daily question, voice dictation on an evening walk, and sealing the day with a single click.',
+            defaultCaption: `For years I tried keeping a traditional journal and always quit after day five. Staring at an empty page at 10 PM feels like homework.\n\nExploring this friction while building YourMoments led me to a much gentler loop — micro-journaling in under a minute:\n1. One curated daily question greets you right away (or switch to Free Thought).\n2. Type a few honest sentences — or dictate by voice while walking home.\n3. Click “Seal the day” — the ink softens, your companion opens a book, and the memory is locked into your calendar.\n\nEvery few sealed days, stars light up with a warm reflection on where you slowed down. You can try today’s question live at dailymoments.app.`,
+            defaultHashtags: [
+              '#microjournaling',
+              '#dailyhabit',
+              '#ideaexplorer',
+              '#buildinpublic',
+              '#yourmoments',
+              '#eveningritual',
+              '#mindfulproductivity',
+              '#indiedev',
+            ],
+          },
+        ];
+
+    // Step 1: Generate 3 distinct authentic captions via Gemini ("idea explorer" persona)
+    let generatedItems: {
+      id: 'e2ee' | 'minimal_ui' | 'daily_habit';
+      headline: string;
+      visualQuote: string;
+      caption: string;
+      hashtags: string[];
+    }[] = [];
+
+    if (process.env.GEMINI_API_KEY && Date.now() >= geminiQuotaBlockedUntil) {
+      try {
+        const promptLanguage = isPl ? 'Polish (polski)' : 'English';
+        const response = await ai.models.generateContent({
+          model: 'gemini-3.8-flash',
+          contents: `Generate a 3-part Instagram campaign for the "YourMoments" (dailymoments.app) app in ${promptLanguage}.${
+            customNote ? ` Additional founder direction: ${String(customNote).slice(0, 400)}` : ''
+          }
+Each post must highlight one specific feature in this exact order:
+1. id: "e2ee" — End-to-End Encryption (client-side AES-256 encryption in the browser before cloud sync, zero-knowledge privacy).
+2. id: "minimal_ui" — Minimal Distraction-Free Interface (warm paper aesthetic, literary serif typography, quiet margin follow-up hints, pixel companion at the desk, instant PLG writing on the homepage without a login wall).
+3. id: "daily_habit" — Daily Micro-Journaling Habit (one thoughtful daily prompt, voice dictation for evening walks, sealing the day in 60 seconds, warm appreciation stars after a few days).
+
+Tone & Framing:
+- Keep the tone authentic, reflective, and grounded, framing the author as an "idea explorer" sharing the project's progress and design discoveries in public.
+- Avoid generic marketing hype or pushy sales language.`,
+          config: {
+            thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  id: {
+                    type: Type.STRING,
+                    description: 'Feature identifier: e2ee, minimal_ui, or daily_habit',
+                  },
+                  headline: {
+                    type: Type.STRING,
+                    description: 'Short, punchy 1-sentence editorial headline for the 1080x1080 square visual (max 95 chars)',
+                  },
+                  visualQuote: {
+                    type: Type.STRING,
+                    description: 'Concise 1-2 sentence summary printed on the 1080x1080 square card (max 160 chars)',
+                  },
+                  caption: {
+                    type: Type.STRING,
+                    description: 'Full multi-paragraph Instagram caption written in first-person as an idea explorer sharing the project progress',
+                  },
+                  hashtags: {
+                    type: Type.ARRAY,
+                    items: { type: Type.STRING },
+                    description: '6 to 8 relevant Instagram hashtags starting with #',
+                  },
+                },
+                required: ['id', 'headline', 'visualQuote', 'caption', 'hashtags'],
+              },
+            },
+          },
+        });
+
+        const parsed = JSON.parse((response.text ?? '[]').trim());
+        if (Array.isArray(parsed) && parsed.length === 3) {
+          generatedItems = parsed;
+        }
+      } catch (err) {
+        console.warn('[Campaign] Gemini generation fallback to curated Idea Explorer copy:', err);
+      }
+    }
+
+    // Merge Gemini output with our 3 feature specs
+    const mergedPosts = featureSpecs.map((spec, idx) => {
+      const matched =
+        generatedItems.find(item => item.id === spec.id) || generatedItems[idx] || null;
+      return {
+        id: spec.id,
+        partLabel: spec.partLabel,
+        featureTitle: spec.featureTitle,
+        accentHex: spec.accentHex,
+        headline:
+          matched?.headline && typeof matched.headline === 'string' && matched.headline.trim()
+            ? matched.headline.trim()
+            : spec.defaultHeadline,
+        visualQuote:
+          matched?.visualQuote &&
+          typeof matched.visualQuote === 'string' &&
+          matched.visualQuote.trim()
+            ? matched.visualQuote.trim()
+            : spec.defaultVisualQuote,
+        caption:
+          matched?.caption && typeof matched.caption === 'string' && matched.caption.trim()
+            ? matched.caption.trim()
+            : spec.defaultCaption,
+        hashtags:
+          Array.isArray(matched?.hashtags) && matched.hashtags.length > 0
+            ? matched.hashtags.map((h: string) => (h.startsWith('#') ? h : `#${h}`))
+            : spec.defaultHashtags,
+      };
+    });
+
+    // Step 2: For each of the 3 features, make a backend POST request using axios to the Doop API
+    // Pass the generated text as the payload to create a 1080x1080 Instagram square image, authenticating with process.env.DOOP_API_KEY
+    const doopApiKey = process.env.DOOP_API_KEY || '';
+    const doopEndpoint = process.env.DOOP_API_URL || 'https://api.doop.ai/v1/images/generate';
+
+    const campaignResults = await Promise.all(
+      mergedPosts.map(async post => {
+        const doopPayload = {
+          text: post.caption,
+          headline: post.headline,
+          subtext: post.visualQuote,
+          feature: post.featureTitle,
+          width: 1080,
+          height: 1080,
+          dimensions: '1080x1080',
+          format: 'instagram_square',
+        };
+
+        let imageUrl = '';
+        let imageSource: 'doop_api' | 'doop_svg_fallback' = 'doop_svg_fallback';
+        let doopStatusMessage = '';
+
+        try {
+          const doopResponse = await axios.post(doopEndpoint, doopPayload, {
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${doopApiKey}`,
+              'x-api-key': doopApiKey,
+            },
+            timeout: 12000,
+          });
+
+          const data = doopResponse.data;
+          const returnedAsset =
+            data?.imageUrl ||
+            data?.image_url ||
+            data?.url ||
+            data?.image ||
+            data?.assetUrl ||
+            data?.data?.[0]?.url ||
+            data?.data?.url;
+
+          if (typeof returnedAsset === 'string' && returnedAsset.trim()) {
+            imageUrl = returnedAsset.trim();
+            imageSource = 'doop_api';
+            doopStatusMessage = 'Rendered via Doop API (1080×1080)';
+          } else {
+            doopStatusMessage = 'Doop API responded without image URL — using local 1080×1080 square render';
+          }
+        } catch (doopErr: any) {
+          const status = doopErr?.response?.status;
+          const reason = status
+            ? `HTTP ${status}`
+            : doopErr?.code || doopErr?.message || 'unreachable';
+          doopStatusMessage = doopApiKey
+            ? `Doop API request sent (${reason}) — rendered 1080×1080 square asset from payload`
+            : 'DOOP_API_KEY not set in environment — rendered 1080×1080 square asset from payload';
+        }
+
+        if (!imageUrl) {
+          imageUrl = buildDoopFallbackSvgDataUri(
+            post.partLabel,
+            post.featureTitle,
+            post.headline,
+            post.visualQuote,
+            post.accentHex,
+            post.id
+          );
+        }
+
+        return {
+          ...post,
+          imageUrl,
+          imageSource,
+          doopStatusMessage,
+          dimensions: '1080x1080',
+        };
+      })
+    );
+
+    return res.json({
+      ok: true,
+      generatedAt: new Date().toISOString(),
+      doopKeyConfigured: Boolean(doopApiKey),
+      posts: campaignResults,
+    });
+  });
   const sharesMap = loadSharesFromDisk();
 
   app.use('/api/shares', (req, res, next) => {

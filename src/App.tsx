@@ -69,6 +69,7 @@ import { PromptLibraryView } from './components/PromptLibraryView';
 import { SparkleModal, SparkleAppreciationCard } from './components/SparkleModal';
 import { OneTimeShareModal } from './components/OneTimeShareModal';
 import { SharedEntryView } from './components/SharedEntryView';
+import { AdminCampaignView } from './components/AdminCampaignView';
 import { User } from 'lucide-react';
 import { useNetworkStatus, checkAndTriggerScheduledReminder } from './services/pwa';
 
@@ -1950,8 +1951,12 @@ export default function App() {
     };
   }, [authReady, currentUser, showLandingPreview]);
 
+  const isAdminCampaignRoute =
+    currentPathname === '/admin/campaign' || currentPathname.startsWith('/admin/campaign/');
+
   useEffect(() => {
-    if ((!authReady && !activeShareId) || typeof document === 'undefined') return;
+    if ((!authReady && !activeShareId && !isAdminCampaignRoute) || typeof document === 'undefined')
+      return;
     const loader = document.getElementById('initial-app-loader');
     if (!loader) return;
     const rafId = window.requestAnimationFrame(() => {
@@ -1964,7 +1969,16 @@ export default function App() {
       window.cancelAnimationFrame(rafId);
       window.clearTimeout(timerId);
     };
-  }, [authReady, activeShareId]);
+  }, [authReady, activeShareId, isAdminCampaignRoute]);
+
+  if (isAdminCampaignRoute) {
+    return (
+      <AdminCampaignView
+        initialLang={lang}
+        onNavigateHome={() => navigateTo('/')}
+      />
+    );
+  }
 
   if (activeShareId) {
     return (

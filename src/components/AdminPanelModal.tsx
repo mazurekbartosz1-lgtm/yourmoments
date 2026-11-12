@@ -548,6 +548,19 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            <a
+              href="/admin/campaign"
+              onClick={(e) => {
+                e.preventDefault();
+                onClose();
+                window.history.pushState({}, '', '/admin/campaign');
+                window.dispatchEvent(new PopStateEvent('popstate'));
+              }}
+              className="px-3 py-1.5 rounded-lg border border-[#D4CEBF] bg-[#FAF8F5] hover:bg-[#EAE5DA] text-xs font-mono-meta text-[#1C1A18] inline-flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0"
+            >
+              <Globe className="w-3.5 h-3.5 text-[#8A6D3B]" />
+              <span>{tr('IG Campaign', 'IG Campaign')}</span>
+            </a>
             <button
               type="button"
               onClick={fetchAdminStats}
